@@ -16,11 +16,11 @@ const viewports = [
 // Each capture: a URL (so we can pass ?mock=final), which tab to click,
 // and the filename prefix.
 const captures = [
-  { url: '/',             tab: 'Pool stage',      prefix: 'group' },
-  { url: '/',             tab: 'Knockout ladder', prefix: 'knockout' },
-  { url: '/',             tab: 'Winners',         prefix: 'winners' },
-  { url: '/?mock=final',  tab: 'Knockout ladder', prefix: 'knockout-final' },
-  { url: '/?mock=final',  tab: 'Winners',         prefix: 'winners-final' },
+  { url: '/?mock=1',     tab: 'Pool stage',      prefix: 'group' },
+  { url: '/?mock=1',     tab: 'Knockout ladder', prefix: 'knockout' },
+  { url: '/?mock=1',     tab: 'Winners',         prefix: 'winners' },
+  { url: '/?mock=final', tab: 'Knockout ladder', prefix: 'knockout-final' },
+  { url: '/?mock=final', tab: 'Winners',         prefix: 'winners-final' },
 ];
 
 await mkdir(OUT, { recursive: true });

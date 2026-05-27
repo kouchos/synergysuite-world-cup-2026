@@ -34,8 +34,10 @@ Checkpoint 1 of an incremental build:
 - [x] Knockout view bracket (R32 → R16 → QF → SF → Final + 3rd place, with TBD slots)
 - [x] Winners view with champion hero + 3 secondary prize cards
 - [x] `MOCK_STATE_FINAL` for previewing the post-tournament state (`?mock=final`)
-- [ ] ESPN adapter wired to the store
-- [ ] openfootball baseline integration
+- [x] ESPN adapter wired to the store with adaptive refresh (60s live / 5min matchday / 30min idle)
+- [x] openfootball baseline integration (fixtures pulled at runtime, cached 6h)
+- [x] localStorage cache with stale-while-revalidate (`lib/cache.js`)
+- [x] Footer sync indicator + last-error fallback
 - [ ] Transitions / countdown / polish
 
 ## Local development
@@ -45,13 +47,29 @@ npm install
 npm run dev
 ```
 
-Opens on `http://localhost:5173`. Currently always runs against mock data (live integration arrives in a later checkpoint).
+Opens on `http://localhost:5173`. Default is **live mode** — fetches ESPN + openfootball on first paint and refreshes adaptively. The initial render uses the mock fixture so there's never a blank page during the first fetch.
 
 Flags:
 
-- `?mock=1` — force mock mode (default for now — mid-tournament fixture)
+- `?mock=1` — force mid-tournament mock (recommended for dev so you're not hammering ESPN)
 - `?mock=final` — load the post-final mock so the Winners view and resolved bracket render
-- `?nocache=1` — bypass localStorage cache (once live data is wired)
+- `VITE_MOCK=1 npm run dev` — make mock the default for the whole session
+
+### Data layer
+
+```
+openfootball/worldcup.json  →  fixture skeleton + group structure (6h TTL)
+ESPN scoreboard             →  per-match status, scores, basic events  (30s live / 5min idle)
+ESPN standings              →  group tables                            (60s live / 10min idle)
+ESPN summary (per match)    →  full goalscorers + cards backfill       (30s live / 24h once final)
+config/employees.json       →  apply owner mapping
+                                          ↓
+                          internal `State` shape  ←  same shape as MOCK_STATE
+                                          ↓
+                       4 derived prize leaderboards + 3 views
+```
+
+The adapter is the only file that knows ESPN field names — if ESPN ever breaks, swap `lib/data/adapter.js` for an API-Football Pro implementation without touching the views.
 
 ### Capturing screenshots
 
