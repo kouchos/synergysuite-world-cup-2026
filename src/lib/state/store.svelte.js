@@ -1,6 +1,7 @@
 import employeesConfig from '../../../config/employees.json';
 import { MOCK_STATE, MOCK_STATE_FINAL } from '../data/mock.js';
 import { fetchLiveState, backfillEvents } from '../data/adapter.js';
+import { purge as purgeCache } from '../cache.js';
 
 const employees = employeesConfig.employees;
 
@@ -9,7 +10,11 @@ const employees = employeesConfig.employees;
 // post-tournament mock. VITE_MOCK=1 at build time flips dev to mock by default.
 function modeFromUrl() {
   if (typeof window === 'undefined') return import.meta.env.VITE_MOCK === '1' ? 'mock' : 'live';
-  const flag = new URLSearchParams(window.location.search).get('mock');
+  const params = new URLSearchParams(window.location.search);
+  // ?nocache=1 — clear localStorage cache on load so the next fetch goes to
+  // the network. Useful for verifying live data is actually flowing through.
+  if (params.get('nocache') === '1') purgeCache();
+  const flag = params.get('mock');
   if (flag === 'final' || flag === 'end' || flag === 'winners') return 'mock-final';
   if (flag === '1' || flag === 'true' || flag === 'mid') return 'mock';
   return import.meta.env.VITE_MOCK === '1' ? 'mock' : 'live';

@@ -72,10 +72,13 @@ test.describe('Live data — openfootball baseline', () => {
     test.skip(!openfootballReachable, 'openfootball not reachable');
     await page.getByRole('button', { name: 'Knockout ladder' }).click();
     await expect(page.getByText('ROUND OF 32')).toBeVisible();
-    // Placeholder slots like "1A" (winner of Group A) or "W74" (winner of
-    // match 74) appear before the draw resolves.
+    // 32 knockout matches × 2 team slots = 64 placeholders pre-tournament.
+    // Tolerate small variations (some test runs may execute moments after
+    // matches start) but catch the regression where ESPN's pre-tournament
+    // host-seed previews leak through and replace ~8 placeholders with real
+    // codes. Anything above 50 means the gate's working.
     const placeholderCount = await page.locator('text=/^(1[A-L]|2[A-L]|3[A-LJ\\/]+|W\\d+|L\\d+)$/').count();
-    expect(placeholderCount).toBeGreaterThan(5);
+    expect(placeholderCount).toBeGreaterThan(50);
   });
 
   test('no JavaScript errors during live page load', async ({ page }) => {

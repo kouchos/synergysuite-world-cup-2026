@@ -261,11 +261,27 @@ export async function fetchLiveState() {
 
   let fixtures = baseline.fixtures;
   let knockoutMatches = baseline.knockoutMatches ?? [];
+
+  // Gate: only accept ESPN's resolved knockout-team assignments once the
+  // group stage's last match has kicked off — otherwise ESPN's pre-tournament
+  // bracket previews leak host-seeded R32 matchups into the bracket before
+  // they're actually decided. Up to that point we keep the openfootball
+  // placeholders ('1A', 'W74', '3A/B/C/D/F').
+  const lastGroupKickoff = Math.max(
+    0,
+    ...(baseline.fixtures ?? [])
+      .filter((f) => f.stage === 'group' && f.utc)
+      .map((f) => new Date(f.utc).getTime()),
+  );
+  const knockoutPhaseStarted = lastGroupKickoff > 0 && Date.now() >= lastGroupKickoff;
+
   if (sb.value) {
     const partitioned = partitionEvents(sb.value);
     fixtures = mergeFixtures(baseline.fixtures, partitioned.fixtures);
     if (partitioned.knockoutMatches.length) {
-      knockoutMatches = mergeKnockouts(knockoutMatches, partitioned.knockoutMatches);
+      knockoutMatches = mergeKnockouts(knockoutMatches, partitioned.knockoutMatches, {
+        acceptTeams: knockoutPhaseStarted,
+      });
     }
   }
 
@@ -313,8 +329,11 @@ function mergeGroupStats(baseline, espn) {
   }));
 }
 
-function mergeKnockouts(baseline, espn) {
-  // Match by (round, slot) when ESPN matches that, else by date+pair.
+function mergeKnockouts(baseline, espn, { acceptTeams = true } = {}) {
+  // Match by (round, slot). Pre-knockout-phase (`acceptTeams: false`) keeps
+  // baseline placeholders even when ESPN supplies real codes — ESPN sometimes
+  // publishes tentative R32 matchups for host seeds before the group stage
+  // resolves. After the last group match has kicked off we trust ESPN.
   const byKey = new Map();
   for (const b of baseline) byKey.set(`${b.round}|${b.slot}`, b);
   const out = [...baseline];
@@ -322,10 +341,19 @@ function mergeKnockouts(baseline, espn) {
     const k = `${e.round}|${e.slot}`;
     const existing = byKey.get(k);
     if (existing) {
-      // Only overwrite home/away if the baseline value was a placeholder
-      const placeholders = !isRealCode(existing.home) || !isRealCode(existing.away);
-      Object.assign(existing, e, placeholders ? {} : { home: existing.home, away: existing.away });
-    } else {
+      const espnHasRealTeams = isRealCode(e.home) && isRealCode(e.away);
+      const baselineIsPlaceholder = !isRealCode(existing.home) || !isRealCode(existing.away);
+      if (baselineIsPlaceholder && espnHasRealTeams && acceptTeams) {
+        // accept ESPN's resolved teams + everything else
+        Object.assign(existing, e);
+      } else {
+        // either gate is closed, or baseline already had real teams. Either
+        // way, keep baseline's home/away and just take ESPN's scores/status/etc.
+        Object.assign(existing, e, { home: existing.home, away: existing.away });
+      }
+    } else if (acceptTeams || !isRealCode(e.home)) {
+      // new entry — only append if either we're past the gate, or this entry
+      // has placeholder teams (in which case it's just structural)
       out.push(e);
     }
   }
