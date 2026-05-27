@@ -39,3 +39,8 @@ export function fetchTeam(teamId) {
 export function fetchTeamSchedule(teamId) {
   return getJson(`${BASE}/teams/${teamId}/schedule`);
 }
+
+// Roster (squad list) for a team. Headshots come back as athlete.headshot.href.
+export function fetchTeamRoster(teamId) {
+  return getJson(`${BASE}/teams/${teamId}/roster`);
+}

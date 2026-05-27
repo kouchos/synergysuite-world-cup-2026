@@ -64,12 +64,24 @@ test.describe('Team modal', () => {
     await expect(page.getByRole('heading', { name: 'Mexico' })).toBeVisible();
   });
 
-  test('team modal shows overview/schedule/group tabs', async ({ page }) => {
+  test('team modal shows overview/squad/schedule/group tabs', async ({ page }) => {
     const mexicoRow = page.locator('tr').filter({ hasText: 'Mexico' }).first();
     await mexicoRow.click();
     await expect(page.getByRole('dialog').getByRole('button', { name: /Overview/ })).toBeVisible();
+    await expect(page.getByRole('dialog').getByRole('button', { name: /Squad/ })).toBeVisible();
     await expect(page.getByRole('dialog').getByRole('button', { name: /Schedule/ })).toBeVisible();
     await expect(page.getByRole('dialog').getByRole('button', { name: /Group/ })).toBeVisible();
+  });
+
+  test('Squad tab in team modal opens; shows fallback when ESPN data absent', async ({ page }) => {
+    const mexicoRow = page.locator('tr').filter({ hasText: 'Mexico' }).first();
+    await mexicoRow.click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Squad' }).click();
+    // Without ESPN data the panel reports it can't fetch the roster — the
+    // exact copy depends on whether teamsRef has an ESPN id.
+    await expect(
+      page.getByRole('dialog').getByText(/No squad data|ESPN team ID not yet known|Loading squad/i),
+    ).toBeVisible();
   });
 
   test('clicking the owner badge in the team modal opens the employee modal', async ({ page }) => {

@@ -6,6 +6,7 @@
   import { modal } from '../../lib/state/modal.svelte.js';
   import { store } from '../../lib/state/store.svelte.js';
   import Modal from '../Modal.svelte';
+  import PlayerCard from '../PlayerCard.svelte';
 
   let { matchId } = $props();
 
@@ -65,6 +66,40 @@
   const espnComp = $derived(summary?.header?.competitions?.[0]);
   const espnHome = $derived(espnComp?.competitors?.find((c) => c.homeAway === 'home'));
   const espnAway = $derived(espnComp?.competitors?.find((c) => c.homeAway === 'away'));
+
+  // Parse rosters (lineups + bench) from the summary response.
+  function toPlayer(entry) {
+    const a = entry?.athlete ?? entry;
+    return {
+      id: a?.id,
+      name: a?.displayName ?? a?.shortName ?? a?.fullName,
+      jersey: entry?.jersey ?? a?.jersey,
+      position: a?.position?.abbreviation ?? entry?.position?.abbreviation,
+      headshot: a?.headshot?.href ?? null,
+      starter: entry?.starter ?? false,
+      subbedIn: entry?.subbedIn ?? null,
+      subbedOut: entry?.subbedOut ?? null,
+    };
+  }
+  const lineups = $derived.by(() => {
+    const result = {
+      home: { starters: [], bench: [] },
+      away: { starters: [], bench: [] },
+    };
+    for (const r of summary?.rosters ?? []) {
+      const side = r?.homeAway === 'home' ? 'home' : r?.homeAway === 'away' ? 'away' : null;
+      if (!side) continue;
+      for (const entry of r.roster ?? []) {
+        const p = toPlayer(entry);
+        if (p.starter) result[side].starters.push(p);
+        else result[side].bench.push(p);
+      }
+    }
+    return result;
+  });
+  const hasLineups = $derived(
+    lineups.home.starters.length > 0 || lineups.away.starters.length > 0,
+  );
 
   function navigateTeam(code) {
     if (!store.espnReachable) return;
@@ -192,6 +227,57 @@
                 <span class="text-left tabular-nums font-semibold">{away?.displayValue ?? '—'}</span>
               </div>
             {/each}
+          </div>
+        </section>
+      {/if}
+
+      {#if hasLineups}
+        <section class="mb-5">
+          <h3 class="text-sm font-bold uppercase tracking-widest text-emerald-200/80 mb-3">Lineups</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Home side -->
+            <div>
+              <div class="flex items-center gap-2 mb-2 text-stone-300">
+                {#if home}<span class="text-xl">{home.flag}</span>{/if}
+                <span class="font-semibold text-sm">{home?.name ?? 'Home'}</span>
+                <span class="text-xs text-stone-500 ml-auto">Starting XI</span>
+              </div>
+              <div class="space-y-1.5">
+                {#each lineups.home.starters as p (p.id ?? p.name)}
+                  <PlayerCard player={p} compact />
+                {/each}
+              </div>
+              {#if lineups.home.bench.length}
+                <div class="mt-3 text-xs text-stone-400 uppercase tracking-widest font-bold mb-1.5">Bench</div>
+                <div class="space-y-1.5">
+                  {#each lineups.home.bench as p (p.id ?? p.name)}
+                    <PlayerCard player={p} compact />
+                  {/each}
+                </div>
+              {/if}
+            </div>
+
+            <!-- Away side -->
+            <div>
+              <div class="flex items-center gap-2 mb-2 text-stone-300">
+                {#if away}<span class="text-xl">{away.flag}</span>{/if}
+                <span class="font-semibold text-sm">{away?.name ?? 'Away'}</span>
+                <span class="text-xs text-stone-500 ml-auto">Starting XI</span>
+              </div>
+              <div class="space-y-1.5">
+                {#each lineups.away.starters as p (p.id ?? p.name)}
+                  <PlayerCard player={p} compact />
+                {/each}
+              </div>
+              {#if lineups.away.bench.length}
+                <div class="mt-3 text-xs text-stone-400 uppercase tracking-widest font-bold mb-1.5">Bench</div>
+                <div class="space-y-1.5">
+                  {#each lineups.away.bench as p (p.id ?? p.name)}
+                    <PlayerCard player={p} compact />
+                  {/each}
+                </div>
+              {/if}
+            </div>
           </div>
         </section>
       {/if}

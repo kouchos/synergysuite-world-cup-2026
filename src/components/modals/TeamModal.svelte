@@ -1,11 +1,12 @@
 <script>
   import { teamFor, TEAMS } from '../../lib/data/teams.js';
   import { formatKickoff } from '../../lib/format.js';
-  import { fetchTeam, fetchTeamSchedule } from '../../lib/data/espn.js';
+  import { fetchTeam, fetchTeamSchedule, fetchTeamRoster } from '../../lib/data/espn.js';
   import { swr } from '../../lib/cache.js';
   import { modal } from '../../lib/state/modal.svelte.js';
   import { store } from '../../lib/state/store.svelte.js';
   import Modal from '../Modal.svelte';
+  import PlayerCard from '../PlayerCard.svelte';
 
   let { code } = $props();
 
@@ -40,7 +41,9 @@
   // Lazy ESPN fetch keyed on the team's ESPN id (from teamsRef)
   let teamData = $state(null);
   let scheduleData = $state(null);
+  let rosterData = $state(null);
   let loading = $state(false);
+  let rosterLoading = $state(false);
 
   $effect(() => {
     if (!teamRef?.espnId) return;
@@ -55,9 +58,55 @@
       .finally(() => (loading = false));
   });
 
+  // Roster is only fetched when the tab is first opened — keeps the modal
+  // snappy and avoids a wasted fetch for users who never look at the squad.
+  $effect(() => {
+    if (activeTab !== 'roster' || rosterData || !teamRef?.espnId) return;
+    rosterLoading = true;
+    swr(`espn:team-roster:${teamRef.espnId}`, () => fetchTeamRoster(teamRef.espnId), 6 * 60 * 60 * 1000)
+      .then(({ value }) => (rosterData = value))
+      .catch(() => {})
+      .finally(() => (rosterLoading = false));
+  });
+
+  // ESPN returns rosters in one of two shapes — flat array or position
+  // groups. Normalise to [{ label, players }] for either case.
+  function toPlayer(a) {
+    return {
+      id: a?.id,
+      name: a?.displayName ?? a?.fullName ?? a?.shortName ?? a?.name,
+      jersey: a?.jersey,
+      position: a?.position?.abbreviation ?? a?.position?.name,
+      headshot: a?.headshot?.href ?? null,
+    };
+  }
+  const rosterGroups = $derived.by(() => {
+    const ath = rosterData?.athletes ?? [];
+    if (!ath.length) return [];
+    if (ath[0]?.items) {
+      // Pre-grouped by ESPN
+      return ath.map((g) => ({
+        label: g.position ?? g.displayName ?? 'Squad',
+        players: (g.items ?? []).map(toPlayer),
+      }));
+    }
+    // Flat — group ourselves
+    const byPos = {};
+    const order = ['Goalkeeper', 'Defender', 'Midfielder', 'Forward'];
+    for (const a of ath) {
+      const pos = a?.position?.name ?? 'Other';
+      byPos[pos] ??= [];
+      byPos[pos].push(toPlayer(a));
+    }
+    return Object.entries(byPos)
+      .sort(([a], [b]) => order.indexOf(a) - order.indexOf(b))
+      .map(([label, players]) => ({ label, players }));
+  });
+
   let activeTab = $state('overview');
   const tabs = [
     { id: 'overview', label: 'Overview' },
+    { id: 'roster', label: 'Squad' },
     { id: 'schedule', label: 'Schedule' },
     { id: 'group', label: 'Group' },
   ];
@@ -174,6 +223,29 @@
           <p class="text-stone-400 italic text-sm">No ESPN record data.</p>
         {/if}
       </div>
+    </section>
+  {:else if activeTab === 'roster'}
+    <section>
+      {#if rosterLoading && !rosterData}
+        <p class="text-stone-400 italic text-sm text-center py-6">Loading squad…</p>
+      {:else if rosterGroups.length === 0}
+        <p class="text-stone-400 italic text-sm text-center py-6">
+          {teamRef?.espnId ? 'No squad data available from ESPN.' : 'ESPN team ID not yet known — try again once a match has been played.'}
+        </p>
+      {:else}
+        <div class="space-y-5">
+          {#each rosterGroups as group (group.label)}
+            <div>
+              <h3 class="text-xs font-bold uppercase tracking-widest text-emerald-200/80 mb-2">{group.label} <span class="text-stone-500 font-normal">({group.players.length})</span></h3>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {#each group.players as p (p.id ?? p.name)}
+                  <PlayerCard player={p} />
+                {/each}
+              </div>
+            </div>
+          {/each}
+        </div>
+      {/if}
     </section>
   {:else if activeTab === 'schedule'}
     <section>
