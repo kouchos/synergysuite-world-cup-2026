@@ -269,11 +269,13 @@ export async function fetchLiveState() {
     }
   }
 
-  // ESPN's standings endpoint may return an empty/placeholder response
-  // pre-tournament — fall back to the openfootball baseline groups in that
-  // case so the Pool view still shows the 12 group tables (all at 0 pts).
+  // openfootball baseline owns the *structure* — group IDs (A-L) and which
+  // teams sit in each group. ESPN owns the *stats* (P/W/D/L/GF/GA/Pts/GD).
+  // We merge stat rows in by fifaCode rather than letting ESPN's payload
+  // replace the group structure wholesale — ESPN's group IDs are internal
+  // numeric ids that don't match the FIFA letter scheme.
   const espnGroups = st.value ? normaliseStandings(st.value) : [];
-  const groups = espnGroups.length > 0 ? espnGroups : (baseline.groups ?? []);
+  const groups = mergeGroupStats(baseline.groups ?? [], espnGroups);
   const topScorers = topScorersFrom([...fixtures, ...knockoutMatches]);
   const phase = detectPhase({ fixtures, knockoutMatches });
 
@@ -289,6 +291,26 @@ export async function fetchLiveState() {
       errors: [sb.error, st.error, baseline.error].filter(Boolean).map(String),
     },
   };
+}
+
+function mergeGroupStats(baseline, espn) {
+  if (!espn.length) return baseline;
+  // Flatten ESPN's standings into a fifaCode → stats lookup. Ignores ESPN's
+  // own group IDs (which may be numeric internal ids, not 'A'/'B'/etc.) and
+  // trusts the openfootball baseline for group structure.
+  const statsByTeam = {};
+  for (const g of espn) {
+    for (const row of g.standings ?? []) {
+      if (row.fifaCode) statsByTeam[row.fifaCode] = row;
+    }
+  }
+  return baseline.map((g) => ({
+    ...g,
+    standings: g.standings.map((row) => {
+      const live = statsByTeam[row.fifaCode];
+      return live ? { ...row, ...live } : row;
+    }),
+  }));
 }
 
 function mergeKnockouts(baseline, espn) {
