@@ -6,6 +6,22 @@
  * At group stage with everyone still alive, the rule degenerates to: fewest pts → worst GD → fewest GF.
  */
 
+/**
+ * Has anything actually happened yet? Used by Header to switch off the prize
+ * tiles before the first ball is kicked — otherwise every employee ties at 0
+ * pts and the tiles surface arbitrary tiebreaker picks.
+ */
+export function hasMatchActivity(state) {
+  const anyPlayed = (state.groups ?? []).some((g) =>
+    (g.standings ?? []).some((row) => (row.p ?? 0) > 0),
+  );
+  if (anyPlayed) return true;
+  const liveOrFinal = [...(state.fixtures ?? []), ...(state.knockoutMatches ?? [])].some(
+    (m) => m.status === 'live' || m.status === 'final',
+  );
+  return liveOrFinal || (state.topScorers?.length ?? 0) > 0;
+}
+
 function teamOwner(fifaCode, employees) {
   for (const emp of employees) {
     if (emp.teams.some((t) => t.fifaCode === fifaCode)) return emp;

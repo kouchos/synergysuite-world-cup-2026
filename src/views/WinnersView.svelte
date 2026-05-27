@@ -28,20 +28,24 @@
   {@const runnerUpTeam = teamFor(winner.opponent)}
   <div class="p-6 flex flex-col gap-6">
     <!-- Champion hero -->
-    <section class="rounded-3xl bg-gradient-to-br from-amber-400/20 via-pitch-light/50 to-pitch/30 ring-1 ring-amber-300/30 px-8 py-10 text-center backdrop-blur">
-      <div class="text-amber-300 text-sm uppercase tracking-[0.3em] font-bold mb-4">
+    <section class="rounded-3xl bg-gradient-to-br from-amber-400/20 via-pitch-light/50 to-pitch/30 ring-1 ring-amber-300/30 px-8 py-6 text-center backdrop-blur">
+      <div class="text-amber-300 text-xs uppercase tracking-[0.3em] font-bold mb-2">
         🏆 World Cup 2026 — Champions
       </div>
-      <div class="text-9xl leading-none mb-4">{championTeam.flag}</div>
-      <div class="text-6xl font-bold mb-3">{championTeam.name}</div>
-      {#if winner.owner}
-        <div class="inline-flex items-center gap-3 mt-2">
-          <span class="text-stone-300 text-lg">Sweepstake prize</span>
-          <span class="text-stone-400">→</span>
-          <OwnerBadge employee={winner.owner} size="xl" />
+      <div class="flex items-center justify-center gap-6">
+        <span class="text-7xl leading-none">{championTeam.flag}</span>
+        <div class="text-left">
+          <div class="text-5xl font-bold leading-tight">{championTeam.name}</div>
+          {#if winner.owner}
+            <div class="mt-2 inline-flex items-center gap-2">
+              <span class="text-stone-300 text-sm">Sweepstake prize</span>
+              <span class="text-stone-500">→</span>
+              <OwnerBadge employee={winner.owner} size="lg" />
+            </div>
+          {/if}
         </div>
-      {/if}
-      <div class="mt-6 text-stone-300 text-base">
+      </div>
+      <div class="mt-3 text-stone-300 text-sm">
         Beat <span class="font-semibold text-white">{runnerUpTeam.name}</span>
         {#if winner.opponentOwner}
           (<span style:color={winner.opponentOwner.color} class="font-semibold">{winner.opponentOwner.name}</span>)
@@ -53,7 +57,7 @@
     <!-- Secondary prize cards -->
     <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <!-- Worst team -->
-      <article class="rounded-2xl bg-pitch-light/60 ring-1 ring-rose-300/20 p-6 backdrop-blur">
+      <article class="rounded-2xl bg-pitch-light/60 ring-1 ring-rose-300/20 p-8 backdrop-blur">
         <div class="text-rose-200/80 text-xs uppercase tracking-widest font-bold mb-4">🥄 Worst team</div>
         {#if worst}
           {@const t = teamFor(worst.row.fifaCode)}
@@ -73,7 +77,7 @@
       </article>
 
       <!-- Most cards -->
-      <article class="rounded-2xl bg-pitch-light/60 ring-1 ring-amber-300/20 p-6 backdrop-blur">
+      <article class="rounded-2xl bg-pitch-light/60 ring-1 ring-amber-300/20 p-8 backdrop-blur">
         <div class="text-amber-200/80 text-xs uppercase tracking-widest font-bold mb-4">🟨🟥 Most cards</div>
         {#if cardsLeader}
           <OwnerBadge employee={cardsLeader.employee} size="xl" />
@@ -86,7 +90,7 @@
       </article>
 
       <!-- Golden boot -->
-      <article class="rounded-2xl bg-pitch-light/60 ring-1 ring-yellow-300/20 p-6 backdrop-blur">
+      <article class="rounded-2xl bg-pitch-light/60 ring-1 ring-yellow-300/20 p-8 backdrop-blur">
         <div class="text-yellow-200/80 text-xs uppercase tracking-widest font-bold mb-4">👟 Golden boot</div>
         {#if boot}
           {@const t = teamFor(boot.team)}
