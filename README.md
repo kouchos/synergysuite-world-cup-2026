@@ -30,6 +30,7 @@ Checkpoint 1 of an incremental build:
 - [x] Always-visible Pool/Knockout/Winners tab strip
 - [x] Pool view with group tables + live/upcoming/recent strip
 - [x] GitHub Pages deploy workflow
+- [x] Playwright screenshot script (`npm run screenshots`)
 - [ ] Knockout view bracket
 - [ ] Winners view
 - [ ] ESPN adapter wired to the store
@@ -49,6 +50,18 @@ Flags:
 
 - `?mock=1` — force mock mode (default for now)
 - `?nocache=1` — bypass localStorage cache (once live data is wired)
+
+### Capturing screenshots
+
+`screenshots/` holds reference captures of each view at TV (1920×1080) and laptop (1366×768) sizes. To regenerate them:
+
+```bash
+npx playwright install chromium   # one-off
+npm run dev                       # in one terminal
+npm run screenshots               # in another
+```
+
+Output lands in `screenshots/`.
 
 ## GitHub Pages setup
 
