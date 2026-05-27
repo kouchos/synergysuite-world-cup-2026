@@ -9,20 +9,24 @@
     goldenBootLeader,
   } from '../lib/state/prizes.js';
 
-  let { state, employees } = $props();
+  let { state: snapshot, employees } = $props();
 
-  const active = $derived(hasMatchActivity(state));
-  const overall = $derived(active ? overallLeaderboard(state, employees) : []);
-  const worst = $derived(active ? worstTeam(state, employees) : null);
-  const cards = $derived(active ? mostCardsLeaderboard(state, employees) : []);
-  const boot = $derived(active ? goldenBootLeader(state, employees) : null);
+  // Brand chip — hides gracefully if the logo file isn't shipped (e.g. fresh
+  // clone without the asset, or 404 from CDN).
+  let logoOk = $state(true);
+
+  const active = $derived(hasMatchActivity(snapshot));
+  const overall = $derived(active ? overallLeaderboard(snapshot, employees) : []);
+  const worst = $derived(active ? worstTeam(snapshot, employees) : null);
+  const cards = $derived(active ? mostCardsLeaderboard(snapshot, employees) : []);
+  const boot = $derived(active ? goldenBootLeader(snapshot, employees) : null);
 
   const overallLeader = $derived(overall[0]);
   const cardsLeader = $derived(cards[0]);
 
   // For the pre-tournament hero — find the very first real-team match.
   const firstMatch = $derived(
-    [...(state.fixtures ?? []), ...(state.knockoutMatches ?? [])]
+    [...(snapshot.fixtures ?? []), ...(snapshot.knockoutMatches ?? [])]
       .filter((m) => m.utc && TEAMS[m.home] && TEAMS[m.away])
       .sort((a, b) => new Date(a.utc) - new Date(b.utc))[0],
   );
@@ -30,7 +34,20 @@
 
 {#if !active}
   <!-- Pre-tournament hero: no real prize data yet, so don't fake it. -->
-  <header class="p-4">
+  <header class="px-4 pt-4 space-y-3">
+    {#if logoOk}
+      <div>
+        <div class="inline-flex bg-white rounded-xl p-2 shadow-lg ring-1 ring-white/20">
+          <img
+            src={`${import.meta.env.BASE_URL}synergysuite-wc-logo.png`}
+            alt="SynergySuite World Cup 2026"
+            class="h-12 md:h-14 lg:h-16 w-auto block"
+            onerror={() => (logoOk = false)}
+          />
+        </div>
+      </div>
+    {/if}
+
     <div class="rounded-2xl bg-gradient-to-br from-emerald-500/15 via-pitch-light/60 to-pitch/30 ring-1 ring-emerald-300/20 px-8 py-6 backdrop-blur flex items-center gap-6">
       <div class="text-5xl">⚽</div>
       <div class="flex-1">
@@ -68,7 +85,21 @@
     </div>
   </header>
 {:else}
-  <header class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 p-4">
+  <header class="px-4 pt-4 space-y-3">
+    {#if logoOk}
+      <div>
+        <div class="inline-flex bg-white rounded-xl p-2 shadow-lg ring-1 ring-white/20">
+          <img
+            src={`${import.meta.env.BASE_URL}synergysuite-wc-logo.png`}
+            alt="SynergySuite World Cup 2026"
+            class="h-12 md:h-14 lg:h-16 w-auto block"
+            onerror={() => (logoOk = false)}
+          />
+        </div>
+      </div>
+    {/if}
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
     <!-- Overall leader -->
     <div class="rounded-2xl bg-pitch-light/60 ring-1 ring-white/10 p-5 backdrop-blur flex flex-col">
       <div class="text-xs uppercase tracking-widest text-emerald-200/80 mb-3">Overall leader</div>
@@ -147,6 +178,7 @@
         </div>
         <div class="mt-3 text-stone-300 text-sm tabular-nums">{boot.goals} goals</div>
       {/if}
+    </div>
     </div>
   </header>
 {/if}
