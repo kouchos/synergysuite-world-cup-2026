@@ -81,3 +81,22 @@ export function goldenBootLeader(state, employees) {
   if (!top) return null;
   return { ...top, owner: teamOwner(top.team, employees) };
 }
+
+export function tournamentWinner(state, employees) {
+  const final = (state.knockoutMatches ?? []).find((m) => m.round === 'Final');
+  if (!final || final.status !== 'final') return null;
+  const winnerCode =
+    final.homeGoals > final.awayGoals
+      ? final.home
+      : final.awayGoals > final.homeGoals
+        ? final.away
+        : null;
+  if (!winnerCode) return null;
+  return {
+    team: winnerCode,
+    owner: teamOwner(winnerCode, employees),
+    score: `${final.homeGoals}–${final.awayGoals}`,
+    opponent: winnerCode === final.home ? final.away : final.home,
+    opponentOwner: teamOwner(winnerCode === final.home ? final.away : final.home, employees),
+  };
+}

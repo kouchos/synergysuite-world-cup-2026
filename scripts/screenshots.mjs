@@ -1,4 +1,5 @@
-// Captures screenshots of all three views at the TV target size.
+// Captures screenshots of all three views at the TV target size, plus a couple
+// of post-final captures via ?mock=final so the Winners view has something to show.
 // Run: node scripts/screenshots.mjs   (requires `npm run dev` to be live on :5173)
 import { chromium } from 'playwright';
 import { mkdir } from 'node:fs/promises';
@@ -12,14 +13,17 @@ const viewports = [
   { name: 'laptop',   width: 1366, height: 768 },
 ];
 
-const views = [
-  { id: 'group',    label: 'Pool stage' },
-  { id: 'knockout', label: 'Knockout ladder' },
-  { id: 'winners',  label: 'Winners' },
+// Each capture: a URL (so we can pass ?mock=final), which tab to click,
+// and the filename prefix.
+const captures = [
+  { url: '/',             tab: 'Pool stage',      prefix: 'group' },
+  { url: '/',             tab: 'Knockout ladder', prefix: 'knockout' },
+  { url: '/',             tab: 'Winners',         prefix: 'winners' },
+  { url: '/?mock=final',  tab: 'Knockout ladder', prefix: 'knockout-final' },
+  { url: '/?mock=final',  tab: 'Winners',         prefix: 'winners-final' },
 ];
 
 await mkdir(OUT, { recursive: true });
-
 const browser = await chromium.launch();
 
 for (const vp of viewports) {
@@ -28,14 +32,12 @@ for (const vp of viewports) {
     deviceScaleFactor: 1,
   });
   const page = await ctx.newPage();
-  await page.goto(BASE, { waitUntil: 'networkidle' });
 
-  for (const view of views) {
-    // Click the matching tab so the screenshot reflects that view.
-    await page.getByRole('button', { name: view.label }).click();
-    // Tiny settle so transitions/layout finish before capture.
-    await page.waitForTimeout(150);
-    const file = `${OUT}/${view.id}-${vp.name}.png`;
+  for (const cap of captures) {
+    await page.goto(BASE + cap.url, { waitUntil: 'networkidle' });
+    await page.getByRole('button', { name: cap.tab }).click();
+    await page.waitForTimeout(200);
+    const file = `${OUT}/${cap.prefix}-${vp.name}.png`;
     await page.screenshot({ path: file, fullPage: false });
     console.log(`  wrote ${file}`);
   }

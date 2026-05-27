@@ -32,7 +32,8 @@ Checkpoint 1 of an incremental build:
 - [x] GitHub Pages deploy workflow
 - [x] Playwright screenshot script (`npm run screenshots`)
 - [x] Knockout view bracket (R32 → R16 → QF → SF → Final + 3rd place, with TBD slots)
-- [ ] Winners view
+- [x] Winners view with champion hero + 3 secondary prize cards
+- [x] `MOCK_STATE_FINAL` for previewing the post-tournament state (`?mock=final`)
 - [ ] ESPN adapter wired to the store
 - [ ] openfootball baseline integration
 - [ ] Transitions / countdown / polish
@@ -48,7 +49,8 @@ Opens on `http://localhost:5173`. Currently always runs against mock data (live 
 
 Flags:
 
-- `?mock=1` — force mock mode (default for now)
+- `?mock=1` — force mock mode (default for now — mid-tournament fixture)
+- `?mock=final` — load the post-final mock so the Winners view and resolved bracket render
 - `?nocache=1` — bypass localStorage cache (once live data is wired)
 
 ### Capturing screenshots

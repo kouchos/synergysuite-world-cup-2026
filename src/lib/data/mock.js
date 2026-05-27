@@ -314,3 +314,61 @@ export const MOCK_STATE = {
     { id: 'final-1', round: 'Final', slot: 1, utc: '2026-07-19T20:00:00Z', home: null, away: null, homeGoals: null, awayGoals: null, status: 'scheduled' },
   ],
 };
+
+/**
+ * End-of-tournament snapshot for ?mock=final. Used to demo and screenshot the
+ * Winners view (and the fully-resolved Pool / Knockout views) before the real
+ * final exists. Engineered so all four prize tiles land on different employees:
+ *   Champion → Niall (France lift the cup, beating Argentina 2-1)
+ *   Worst    → Jeff   (Curaçao still the cellar dwellers from groups)
+ *   Cards    → Tom    (extended his group-stage lead through to bronze)
+ *   Golden   → Tim    (Lautaro Martínez 7 — silver but still top scorer)
+ */
+export const MOCK_STATE_FINAL = {
+  ...MOCK_STATE,
+  phase: 'winners',
+  lastUpdated: new Date('2026-07-19T22:30:00+01:00').toISOString(),
+  // Group standings remain as they were at end of group stage — no further changes.
+  // The big difference is the bracket is now fully resolved.
+  knockoutMatches: [
+    // R32 — unchanged from the mid-tournament mock
+    ...MOCK_STATE.knockoutMatches.filter((m) => m.round === 'R32'),
+
+    // R16 — finish off the 3 that were live/scheduled mid-tournament
+    { id: 'r16-1', round: 'R16', slot: 1, utc: '2026-07-05T18:00:00Z', home: 'NED', away: 'MEX', homeGoals: 2, awayGoals: 0, status: 'final' },
+    { id: 'r16-2', round: 'R16', slot: 2, utc: '2026-07-05T22:00:00Z', home: 'JPN', away: 'ENG', homeGoals: 1, awayGoals: 2, status: 'final' },
+    { id: 'r16-3', round: 'R16', slot: 3, utc: '2026-07-06T19:00:00Z', home: 'ESP', away: 'ARG', homeGoals: 2, awayGoals: 3, status: 'final' },
+    { id: 'r16-4', round: 'R16', slot: 4, utc: '2026-07-06T22:00:00Z', home: 'BEL', away: 'BRA', homeGoals: 0, awayGoals: 2, status: 'final' },
+    { id: 'r16-5', round: 'R16', slot: 5, utc: '2026-07-07T18:00:00Z', home: 'FRA', away: 'POR', homeGoals: 3, awayGoals: 1, status: 'final' },
+    { id: 'r16-6', round: 'R16', slot: 6, utc: '2026-07-07T22:00:00Z', home: 'KOR', away: 'USA', homeGoals: 1, awayGoals: 3, status: 'final' },
+    { id: 'r16-7', round: 'R16', slot: 7, utc: '2026-07-08T18:00:00Z', home: 'GER', away: 'SEN', homeGoals: 2, awayGoals: 1, status: 'final' },
+    { id: 'r16-8', round: 'R16', slot: 8, utc: '2026-07-08T22:00:00Z', home: 'NOR', away: 'SUI', homeGoals: 0, awayGoals: 1, status: 'final' },
+
+    // QF
+    { id: 'qf-1', round: 'QF', slot: 1, utc: '2026-07-10T20:00:00Z', home: 'NED', away: 'ENG', homeGoals: 2, awayGoals: 1, status: 'final' },
+    { id: 'qf-2', round: 'QF', slot: 2, utc: '2026-07-10T22:00:00Z', home: 'ARG', away: 'BRA', homeGoals: 2, awayGoals: 0, status: 'final' },
+    { id: 'qf-3', round: 'QF', slot: 3, utc: '2026-07-11T20:00:00Z', home: 'FRA', away: 'USA', homeGoals: 2, awayGoals: 0, status: 'final' },
+    { id: 'qf-4', round: 'QF', slot: 4, utc: '2026-07-11T22:00:00Z', home: 'GER', away: 'SUI', homeGoals: 1, awayGoals: 2, status: 'final' },
+
+    // SF
+    { id: 'sf-1', round: 'SF', slot: 1, utc: '2026-07-14T20:00:00Z', home: 'NED', away: 'ARG', homeGoals: 0, awayGoals: 1, status: 'final' },
+    { id: 'sf-2', round: 'SF', slot: 2, utc: '2026-07-15T20:00:00Z', home: 'FRA', away: 'SUI', homeGoals: 3, awayGoals: 0, status: 'final' },
+
+    // Third place
+    { id: 'tp-1', round: 'Third', slot: 1, utc: '2026-07-18T20:00:00Z', home: 'NED', away: 'SUI', homeGoals: 2, awayGoals: 1, status: 'final' },
+
+    // Final 🏆
+    { id: 'final-1', round: 'Final', slot: 1, utc: '2026-07-19T20:00:00Z', home: 'FRA', away: 'ARG', homeGoals: 2, awayGoals: 1, status: 'final' },
+  ],
+  // Tournament-wide top scorers as they would settle at the end.
+  topScorers: [
+    { player: 'Lautaro Martínez', team: 'ARG', goals: 7 },
+    { player: 'Kylian Mbappé', team: 'FRA', goals: 6 },
+    { player: 'Santiago Giménez', team: 'MEX', goals: 5 },
+    { player: 'Lamine Yamal', team: 'ESP', goals: 4 },
+    { player: 'Vinícius Jr.', team: 'BRA', goals: 4 },
+    { player: 'Florian Wirtz', team: 'GER', goals: 3 },
+    { player: 'Niclas Füllkrug', team: 'GER', goals: 3 },
+    { player: 'Lionel Messi', team: 'ARG', goals: 3 },
+  ],
+};

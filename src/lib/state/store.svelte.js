@@ -1,7 +1,14 @@
 import employeesConfig from '../../../config/employees.json';
-import { MOCK_STATE } from '../data/mock.js';
+import { MOCK_STATE, MOCK_STATE_FINAL } from '../data/mock.js';
 
 const employees = employeesConfig.employees;
+
+function initialMockState() {
+  if (typeof window === 'undefined') return MOCK_STATE;
+  const flag = new URLSearchParams(window.location.search).get('mock');
+  if (flag === 'final' || flag === 'end' || flag === 'winners') return MOCK_STATE_FINAL;
+  return MOCK_STATE;
+}
 
 function detectPhase(state) {
   return state?.phase ?? 'group';
@@ -15,7 +22,7 @@ function isMockMode() {
 }
 
 function createStore() {
-  let snapshot = $state(MOCK_STATE);
+  let snapshot = $state(initialMockState());
   let activeView = $state(null); // null = follow phase
   let lastSync = $state(new Date());
   let syncing = $state(false);
