@@ -2,12 +2,16 @@
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
   import { store } from './lib/state/store.svelte.js';
+  import { modal } from './lib/state/modal.svelte.js';
   import Header from './components/Header.svelte';
   import ViewTabs from './components/ViewTabs.svelte';
   import Countdown from './components/Countdown.svelte';
   import PoolView from './views/PoolView.svelte';
   import KnockoutView from './views/KnockoutView.svelte';
   import WinnersView from './views/WinnersView.svelte';
+  import EmployeeModal from './components/modals/EmployeeModal.svelte';
+  import GameModal from './components/modals/GameModal.svelte';
+  import TeamModal from './components/modals/TeamModal.svelte';
 
   function selectView(id) {
     store.setView(id);
@@ -62,6 +66,14 @@
       </div>
     {/if}
   </main>
+
+  {#if modal.current?.type === 'employee'}
+    <EmployeeModal employeeId={modal.current.params.id} />
+  {:else if modal.current?.type === 'team'}
+    <TeamModal code={modal.current.params.code} />
+  {:else if modal.current?.type === 'game'}
+    <GameModal matchId={modal.current.params.matchId} />
+  {/if}
 
   <footer class="px-4 py-3 text-xs text-stone-400/70 flex items-center justify-between gap-4">
     <span>SynergySuite World Cup 2026 sweepstake</span>

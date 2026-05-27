@@ -1,5 +1,5 @@
 <script>
-  import { teamFor } from '../lib/data/teams.js';
+  import { teamFor, TEAMS } from '../lib/data/teams.js';
   import {
     tournamentWinner,
     worstTeam,
@@ -7,8 +7,17 @@
     goldenBootLeader,
   } from '../lib/state/prizes.js';
   import OwnerBadge from '../components/OwnerBadge.svelte';
+  import { modal } from '../lib/state/modal.svelte.js';
+  import { store } from '../lib/state/store.svelte.js';
 
   let { state, employees } = $props();
+
+  function openTeam(code) {
+    if (store.espnReachable && TEAMS[code]) modal.team(code);
+  }
+  function openEmployee(emp) {
+    if (emp) modal.employee(emp.id);
+  }
 
   const winner = $derived(tournamentWinner(state, employees));
   const worst = $derived(worstTeam(state, employees));
@@ -33,22 +42,23 @@
         🏆 World Cup 2026 — Champions
       </div>
       <div class="flex items-center justify-center gap-6">
-        <span class="text-7xl leading-none">{championTeam.flag}</span>
-        <div class="text-left">
-          <div class="text-5xl font-bold leading-tight">{championTeam.name}</div>
-          {#if winner.owner}
-            <div class="mt-2 inline-flex items-center gap-2">
-              <span class="text-stone-300 text-sm">Sweepstake prize</span>
-              <span class="text-stone-500">→</span>
-              <OwnerBadge employee={winner.owner} size="lg" />
-            </div>
-          {/if}
-        </div>
+        <button type="button" class="group flex items-center gap-6 disabled:cursor-default" onclick={() => openTeam(winner.team)} disabled={!store.espnReachable}>
+          <span class="text-7xl leading-none group-hover:scale-105 transition-transform">{championTeam.flag}</span>
+          <div class="text-5xl font-bold leading-tight group-hover:underline decoration-2 underline-offset-4">{championTeam.name}</div>
+        </button>
+        {#if winner.owner}
+          <button type="button" class="inline-flex items-center gap-2 hover:opacity-90 ml-2" onclick={() => openEmployee(winner.owner)}>
+            <span class="text-stone-300 text-sm">Sweepstake prize</span>
+            <span class="text-stone-500">→</span>
+            <OwnerBadge employee={winner.owner} size="lg" />
+          </button>
+        {/if}
       </div>
       <div class="mt-3 text-stone-300 text-sm">
-        Beat <span class="font-semibold text-white">{runnerUpTeam.name}</span>
+        Beat
+        <button type="button" class="font-semibold text-white hover:underline decoration-1 underline-offset-2 disabled:no-underline disabled:cursor-default" onclick={() => openTeam(winner.opponent)} disabled={!store.espnReachable}>{runnerUpTeam.name}</button>
         {#if winner.opponentOwner}
-          (<span style:color={winner.opponentOwner.color} class="font-semibold">{winner.opponentOwner.name}</span>)
+          (<button type="button" style:color={winner.opponentOwner.color} class="font-semibold hover:underline" onclick={() => openEmployee(winner.opponentOwner)}>{winner.opponentOwner.name}</button>)
         {/if}
         <span class="font-bold text-white tabular-nums">{winner.score}</span> in the final
       </div>
@@ -62,11 +72,13 @@
         {#if worst}
           {@const t = teamFor(worst.row.fifaCode)}
           <div class="flex items-center gap-4">
-            <span class="text-7xl leading-none">{t.flag}</span>
+            <button type="button" class="text-7xl leading-none hover:scale-105 transition-transform disabled:cursor-default" onclick={() => openTeam(worst.row.fifaCode)} disabled={!store.espnReachable}>{t.flag}</button>
             <div>
-              <div class="text-3xl font-bold leading-tight">{t.name}</div>
+              <button type="button" class="text-3xl font-bold leading-tight hover:underline decoration-2 underline-offset-4 disabled:no-underline disabled:cursor-default text-left" onclick={() => openTeam(worst.row.fifaCode)} disabled={!store.espnReachable}>{t.name}</button>
               {#if worst.owner}
-                <div class="mt-2"><OwnerBadge employee={worst.owner} size="lg" /></div>
+                <button type="button" class="mt-2 block hover:opacity-90" onclick={() => openEmployee(worst.owner)}>
+                  <OwnerBadge employee={worst.owner} size="lg" />
+                </button>
               {/if}
             </div>
           </div>
@@ -80,7 +92,9 @@
       <article class="rounded-2xl bg-pitch-light/60 ring-1 ring-amber-300/20 p-8 backdrop-blur">
         <div class="text-amber-200/80 text-xs uppercase tracking-widest font-bold mb-4">🟨🟥 Most cards</div>
         {#if cardsLeader}
-          <OwnerBadge employee={cardsLeader.employee} size="xl" />
+          <button type="button" class="hover:opacity-90" onclick={() => openEmployee(cardsLeader.employee)}>
+            <OwnerBadge employee={cardsLeader.employee} size="xl" />
+          </button>
           <div class="mt-4 flex items-center gap-3 text-stone-200 text-lg">
             <span class="flex items-center gap-1.5">🟨 <span class="font-bold tabular-nums">{cardsLeader.yellow}</span></span>
             <span class="flex items-center gap-1.5">🟥 <span class="font-bold tabular-nums">{cardsLeader.red}</span></span>
@@ -95,12 +109,14 @@
         {#if boot}
           {@const t = teamFor(boot.team)}
           <div class="flex items-center gap-4">
-            <span class="text-6xl leading-none">{t.flag}</span>
+            <button type="button" class="text-6xl leading-none hover:scale-105 transition-transform disabled:cursor-default" onclick={() => openTeam(boot.team)} disabled={!store.espnReachable}>{t.flag}</button>
             <div>
               <div class="text-2xl font-bold leading-tight">{boot.player}</div>
-              <div class="text-sm text-stone-300 mt-0.5">{t.name}</div>
+              <button type="button" class="text-sm text-stone-300 mt-0.5 hover:underline decoration-1 underline-offset-2 disabled:no-underline disabled:cursor-default" onclick={() => openTeam(boot.team)} disabled={!store.espnReachable}>{t.name}</button>
               {#if boot.owner}
-                <div class="mt-2"><OwnerBadge employee={boot.owner} size="lg" /></div>
+                <button type="button" class="mt-2 block hover:opacity-90" onclick={() => openEmployee(boot.owner)}>
+                  <OwnerBadge employee={boot.owner} size="lg" />
+                </button>
               {/if}
             </div>
           </div>

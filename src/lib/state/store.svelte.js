@@ -65,6 +65,14 @@ function createStore() {
   const phase = $derived(snapshot?.phase ?? 'group');
   const view = $derived(activeView ?? phase);
   const activity = $derived(detectActivity(snapshot));
+  // Whether ESPN data flowed through on the latest sync. Mock modes always
+  // count as "available" (they have full data); for live mode we ask the
+  // adapter's diagnostics whether scoreboard came from network or cache.
+  const espnReachable = $derived.by(() => {
+    if (mode !== 'live') return true;
+    const src = diagnostics?.sources?.scoreboard;
+    return src === 'network' || src === 'cache';
+  });
 
   async function tick() {
     if (mode !== 'live') return;
@@ -111,6 +119,7 @@ function createStore() {
     get activity() { return activity; },
     get diagnostics() { return diagnostics; },
     get nextRefresh() { return nextRefresh; },
+    get espnReachable() { return espnReachable; },
     setView(v) { activeView = v; },
     refresh: tick,
     start,

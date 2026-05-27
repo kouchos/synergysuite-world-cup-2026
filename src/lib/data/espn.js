@@ -29,3 +29,13 @@ export function fetchSummary(eventId) {
 export function fetchStandings() {
   return getJson(STANDINGS);
 }
+
+// Used by the team modal — pulls team home (overview, record, schedule, etc.)
+export function fetchTeam(teamId) {
+  return getJson(`${BASE}/teams/${teamId}`);
+}
+
+// Schedule for a specific team across the tournament window.
+export function fetchTeamSchedule(teamId) {
+  return getJson(`${BASE}/teams/${teamId}/schedule`);
+}

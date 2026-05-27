@@ -243,6 +243,29 @@ function detectPhase({ fixtures, knockoutMatches }) {
   return 'group';
 }
 
+// ── Team metadata extraction (for modals) ─────────────────────────────────────
+// Walk the scoreboard once and pull out ESPN team IDs + brand info per
+// abbreviation. This is what the team modal needs to fetch /teams/{id} for
+// roster / stats / schedule.
+function extractTeamRefs(scoreboard) {
+  const refs = {};
+  for (const event of scoreboard?.events ?? []) {
+    for (const c of event?.competitions?.[0]?.competitors ?? []) {
+      const code = c?.team?.abbreviation?.toUpperCase();
+      if (!code || refs[code]) continue;
+      refs[code] = {
+        espnId: c.team.id ?? null,
+        name: c.team.displayName ?? c.team.name ?? code,
+        shortName: c.team.shortDisplayName ?? c.team.name ?? code,
+        logoUrl: c.team.logos?.[0]?.href ?? null,
+        color: c.team.color ? `#${c.team.color}` : null,
+        alternateColor: c.team.alternateColor ? `#${c.team.alternateColor}` : null,
+      };
+    }
+  }
+  return refs;
+}
+
 // ── Public entry point — orchestrates everything ──────────────────────────────
 export async function fetchLiveState() {
   // 1. baseline schedule from openfootball (skeleton groups + fixtures with no scores)
@@ -294,6 +317,7 @@ export async function fetchLiveState() {
   const groups = mergeGroupStats(baseline.groups ?? [], espnGroups);
   const topScorers = topScorersFrom([...fixtures, ...knockoutMatches]);
   const phase = detectPhase({ fixtures, knockoutMatches });
+  const teamsRef = sb.value ? extractTeamRefs(sb.value) : {};
 
   return {
     phase,
@@ -302,6 +326,7 @@ export async function fetchLiveState() {
     fixtures,
     knockoutMatches,
     topScorers,
+    teamsRef,
     _diagnostics: {
       sources: { scoreboard: sb.source, standings: st.source, baseline: baseline.source },
       errors: [sb.error, st.error, baseline.error].filter(Boolean).map(String),
