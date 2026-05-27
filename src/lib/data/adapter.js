@@ -269,7 +269,11 @@ export async function fetchLiveState() {
     }
   }
 
-  const groups = st.value ? normaliseStandings(st.value) : baseline.groups;
+  // ESPN's standings endpoint may return an empty/placeholder response
+  // pre-tournament — fall back to the openfootball baseline groups in that
+  // case so the Pool view still shows the 12 group tables (all at 0 pts).
+  const espnGroups = st.value ? normaliseStandings(st.value) : [];
+  const groups = espnGroups.length > 0 ? espnGroups : (baseline.groups ?? []);
   const topScorers = topScorersFrom([...fixtures, ...knockoutMatches]);
   const phase = detectPhase({ fixtures, knockoutMatches });
 
