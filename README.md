@@ -106,6 +106,38 @@ export async function fetchLiveState() {
 
 The views, store, prize derivations, and mock fixtures stay untouched — they only consume the State shape produced here. Put the key in repo Secrets and wire it through the workflow as `VITE_APIFOOTBALL_KEY`.
 
+### Running the tests
+
+Playwright covers the app end-to-end. The suite auto-starts the dev server,
+so you don't need to keep one running manually.
+
+```bash
+npx playwright install chromium  # one-off, downloads the headless browser
+npm test                         # everything (smoke + network)
+npm run test:smoke               # mock-only, no internet needed
+npm run test:network             # live mode — exercises openfootball + ESPN
+npm run test:ui                  # interactive Playwright UI
+```
+
+- **`tests/smoke.spec.js`** — 14 tests. Runs entirely against the bundled
+  mock fixtures. Verifies header tiles, prize derivations, group tables,
+  bracket rendering (including the live ESP–ARG ring), winners hero, view
+  transitions, and the `?mock=1` / `?mock=final` URL flag behaviour. Has no
+  network dependency; passes offline.
+- **`tests/network.spec.js`** — 12 tests. Probes openfootball + ESPN at
+  startup. ESPN-specific tests auto-skip when ESPN is unreachable (so the
+  suite still passes during a corporate-proxy outage). Validates the 12
+  real WC2026 groups load, the pre-tournament countdown hero appears, the
+  knockout bracket fills with placeholder slots, ESPN's scoreboard +
+  standings endpoints return valid JSON, and the footer's source label
+  reflects what actually loaded.
+
+When you run on a normal laptop with internet, expect ~all 26 tests to
+pass. If ESPN is unreachable from your network, 3 ESPN-specific tests
+will skip (printed as "skipped" not "failed"). If openfootball fails, 6+
+tests will skip — that's the harder failure mode since openfootball is
+the schedule skeleton.
+
 ### Capturing screenshots
 
 `screenshots/` holds reference captures of each view at TV (1920×1080) and laptop (1366×768) sizes. To regenerate them:
