@@ -264,4 +264,53 @@ export const MOCK_STATE = {
     { player: 'Vinícius Jr.', team: 'BRA', goals: 1 },
     { player: 'Florian Wirtz', team: 'GER', goals: 1 },
   ],
+  // Knockout matches — independent of the group-stage state above; the Knockout
+  // view reads from this list. In a real run, ids/slots feed from R32 into R16
+  // etc. For the mock we hand-author a mid-R16 moment: R32 done, half of R16
+  // played (including one live), QF/SF/F/3rd still TBD.
+  knockoutMatches: [
+    // ── Round of 32 — all played ───────────────────────────────────────────────
+    { id: 'r32-1',  round: 'R32', slot: 1,  utc: '2026-06-29T18:00:00Z', home: 'NED', away: 'IRQ', homeGoals: 3, awayGoals: 0, status: 'final' },
+    { id: 'r32-2',  round: 'R32', slot: 2,  utc: '2026-06-29T20:00:00Z', home: 'CRO', away: 'MEX', homeGoals: 1, awayGoals: 2, status: 'final' },
+    { id: 'r32-3',  round: 'R32', slot: 3,  utc: '2026-06-29T22:00:00Z', home: 'JPN', away: 'ECU', homeGoals: 1, awayGoals: 0, status: 'final' },
+    { id: 'r32-4',  round: 'R32', slot: 4,  utc: '2026-06-30T18:00:00Z', home: 'ENG', away: 'BIH', homeGoals: 2, awayGoals: 0, status: 'final' },
+    { id: 'r32-5',  round: 'R32', slot: 5,  utc: '2026-06-30T20:00:00Z', home: 'ESP', away: 'UZB', homeGoals: 4, awayGoals: 1, status: 'final' },
+    { id: 'r32-6',  round: 'R32', slot: 6,  utc: '2026-06-30T22:00:00Z', home: 'ARG', away: 'EGY', homeGoals: 2, awayGoals: 1, status: 'final' },
+    { id: 'r32-7',  round: 'R32', slot: 7,  utc: '2026-07-01T18:00:00Z', home: 'ALG', away: 'BEL', homeGoals: 1, awayGoals: 3, status: 'final' },
+    { id: 'r32-8',  round: 'R32', slot: 8,  utc: '2026-07-01T20:00:00Z', home: 'BRA', away: 'HAI', homeGoals: 4, awayGoals: 0, status: 'final' },
+    { id: 'r32-9',  round: 'R32', slot: 9,  utc: '2026-07-01T22:00:00Z', home: 'FRA', away: 'JOR', homeGoals: 3, awayGoals: 0, status: 'final' },
+    { id: 'r32-10', round: 'R32', slot: 10, utc: '2026-07-02T18:00:00Z', home: 'POR', away: 'COL', homeGoals: 2, awayGoals: 1, status: 'final' },
+    { id: 'r32-11', round: 'R32', slot: 11, utc: '2026-07-02T20:00:00Z', home: 'KOR', away: 'MAR', homeGoals: 1, awayGoals: 0, status: 'final' },
+    { id: 'r32-12', round: 'R32', slot: 12, utc: '2026-07-02T22:00:00Z', home: 'USA', away: 'CAN', homeGoals: 2, awayGoals: 1, status: 'final' },
+    { id: 'r32-13', round: 'R32', slot: 13, utc: '2026-07-03T18:00:00Z', home: 'GER', away: 'URU', homeGoals: 2, awayGoals: 0, status: 'final' },
+    { id: 'r32-14', round: 'R32', slot: 14, utc: '2026-07-03T20:00:00Z', home: 'SEN', away: 'IRN', homeGoals: 1, awayGoals: 0, status: 'final' },
+    { id: 'r32-15', round: 'R32', slot: 15, utc: '2026-07-03T22:00:00Z', home: 'NOR', away: 'AUS', homeGoals: 3, awayGoals: 1, status: 'final' },
+    { id: 'r32-16', round: 'R32', slot: 16, utc: '2026-07-04T18:00:00Z', home: 'SUI', away: 'GHA', homeGoals: 2, awayGoals: 1, status: 'final' },
+
+    // ── Round of 16 — 4 played, 1 live (the big one), 3 to come ────────────────
+    { id: 'r16-1', round: 'R16', slot: 1, utc: '2026-07-05T18:00:00Z', home: 'NED', away: 'MEX', homeGoals: 2, awayGoals: 0, status: 'final' },
+    { id: 'r16-2', round: 'R16', slot: 2, utc: '2026-07-05T22:00:00Z', home: 'JPN', away: 'ENG', homeGoals: 1, awayGoals: 2, status: 'final' },
+    { id: 'r16-3', round: 'R16', slot: 3, utc: '2026-07-06T19:00:00Z', home: 'ESP', away: 'ARG', homeGoals: 1, awayGoals: 1, status: 'live', minute: 67 },
+    { id: 'r16-4', round: 'R16', slot: 4, utc: '2026-07-06T22:00:00Z', home: 'BEL', away: 'BRA', homeGoals: 0, awayGoals: 2, status: 'final' },
+    { id: 'r16-5', round: 'R16', slot: 5, utc: '2026-07-07T18:00:00Z', home: 'FRA', away: 'POR', homeGoals: 3, awayGoals: 1, status: 'final' },
+    { id: 'r16-6', round: 'R16', slot: 6, utc: '2026-07-07T22:00:00Z', home: 'KOR', away: 'USA', homeGoals: null, awayGoals: null, status: 'scheduled' },
+    { id: 'r16-7', round: 'R16', slot: 7, utc: '2026-07-08T18:00:00Z', home: 'GER', away: 'SEN', homeGoals: null, awayGoals: null, status: 'scheduled' },
+    { id: 'r16-8', round: 'R16', slot: 8, utc: '2026-07-08T22:00:00Z', home: 'NOR', away: 'SUI', homeGoals: null, awayGoals: null, status: 'scheduled' },
+
+    // ── Quarter-finals — all TBD ───────────────────────────────────────────────
+    { id: 'qf-1', round: 'QF', slot: 1, utc: '2026-07-10T20:00:00Z', home: null, away: null, homeGoals: null, awayGoals: null, status: 'scheduled' },
+    { id: 'qf-2', round: 'QF', slot: 2, utc: '2026-07-10T22:00:00Z', home: null, away: null, homeGoals: null, awayGoals: null, status: 'scheduled' },
+    { id: 'qf-3', round: 'QF', slot: 3, utc: '2026-07-11T20:00:00Z', home: null, away: null, homeGoals: null, awayGoals: null, status: 'scheduled' },
+    { id: 'qf-4', round: 'QF', slot: 4, utc: '2026-07-11T22:00:00Z', home: null, away: null, homeGoals: null, awayGoals: null, status: 'scheduled' },
+
+    // ── Semi-finals ─────────────────────────────────────────────────────────────
+    { id: 'sf-1', round: 'SF', slot: 1, utc: '2026-07-14T20:00:00Z', home: null, away: null, homeGoals: null, awayGoals: null, status: 'scheduled' },
+    { id: 'sf-2', round: 'SF', slot: 2, utc: '2026-07-15T20:00:00Z', home: null, away: null, homeGoals: null, awayGoals: null, status: 'scheduled' },
+
+    // ── Third place ─────────────────────────────────────────────────────────────
+    { id: 'tp-1', round: 'Third', slot: 1, utc: '2026-07-18T20:00:00Z', home: null, away: null, homeGoals: null, awayGoals: null, status: 'scheduled' },
+
+    // ── Final ───────────────────────────────────────────────────────────────────
+    { id: 'final-1', round: 'Final', slot: 1, utc: '2026-07-19T20:00:00Z', home: null, away: null, homeGoals: null, awayGoals: null, status: 'scheduled' },
+  ],
 };

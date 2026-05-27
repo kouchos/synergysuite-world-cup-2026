@@ -31,7 +31,7 @@ Checkpoint 1 of an incremental build:
 - [x] Pool view with group tables + live/upcoming/recent strip
 - [x] GitHub Pages deploy workflow
 - [x] Playwright screenshot script (`npm run screenshots`)
-- [ ] Knockout view bracket
+- [x] Knockout view bracket (R32 → R16 → QF → SF → Final + 3rd place, with TBD slots)
 - [ ] Winners view
 - [ ] ESPN adapter wired to the store
 - [ ] openfootball baseline integration
