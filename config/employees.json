@@ -1,0 +1,109 @@
+{
+  "_schema": "Employee → 6 teams sweepstake mapping. Each team has a fifaCode (3-letter FIFA/ISO code) and topTier flag (true for the seeded top-tier draw, false for the other 5). Edit this file to update picks — no code changes needed.",
+  "employees": [
+    {
+      "id": "niall",
+      "name": "Niall",
+      "color": "#ef4444",
+      "teams": [
+        { "fifaCode": "BRA", "topTier": true },
+        { "fifaCode": "AUS", "topTier": false },
+        { "fifaCode": "NOR", "topTier": false },
+        { "fifaCode": "CIV", "topTier": false },
+        { "fifaCode": "KSA", "topTier": false },
+        { "fifaCode": "TUN", "topTier": false }
+      ]
+    },
+    {
+      "id": "jeff",
+      "name": "Jeff",
+      "color": "#f97316",
+      "teams": [
+        { "fifaCode": "ARG", "topTier": true },
+        { "fifaCode": "MEX", "topTier": false },
+        { "fifaCode": "JPN", "topTier": false },
+        { "fifaCode": "CRO", "topTier": false },
+        { "fifaCode": "EGY", "topTier": false },
+        { "fifaCode": "JOR", "topTier": false }
+      ]
+    },
+    {
+      "id": "tom",
+      "name": "Tom",
+      "color": "#eab308",
+      "teams": [
+        { "fifaCode": "FRA", "topTier": true },
+        { "fifaCode": "USA", "topTier": false },
+        { "fifaCode": "DEN", "topTier": false },
+        { "fifaCode": "SUI", "topTier": false },
+        { "fifaCode": "GHA", "topTier": false },
+        { "fifaCode": "UZB", "topTier": false }
+      ]
+    },
+    {
+      "id": "joy",
+      "name": "Joy",
+      "color": "#22c55e",
+      "teams": [
+        { "fifaCode": "ENG", "topTier": true },
+        { "fifaCode": "CAN", "topTier": false },
+        { "fifaCode": "URU", "topTier": false },
+        { "fifaCode": "SEN", "topTier": false },
+        { "fifaCode": "PAR", "topTier": false },
+        { "fifaCode": "PAN", "topTier": false }
+      ]
+    },
+    {
+      "id": "eoin",
+      "name": "Eoin",
+      "color": "#06b6d4",
+      "teams": [
+        { "fifaCode": "ESP", "topTier": true },
+        { "fifaCode": "MAR", "topTier": false },
+        { "fifaCode": "KOR", "topTier": false },
+        { "fifaCode": "SCO", "topTier": false },
+        { "fifaCode": "ALG", "topTier": false },
+        { "fifaCode": "CUW", "topTier": false }
+      ]
+    },
+    {
+      "id": "hazel",
+      "name": "Hazel",
+      "color": "#a855f7",
+      "teams": [
+        { "fifaCode": "GER", "topTier": true },
+        { "fifaCode": "BEL", "topTier": false },
+        { "fifaCode": "ECU", "topTier": false },
+        { "fifaCode": "NZL", "topTier": false },
+        { "fifaCode": "IRN", "topTier": false },
+        { "fifaCode": "HAI", "topTier": false }
+      ]
+    },
+    {
+      "id": "jon",
+      "name": "Jon",
+      "color": "#ec4899",
+      "teams": [
+        { "fifaCode": "NED", "topTier": true },
+        { "fifaCode": "AUT", "topTier": false },
+        { "fifaCode": "SRB", "topTier": false },
+        { "fifaCode": "QAT", "topTier": false },
+        { "fifaCode": "RSA", "topTier": false },
+        { "fifaCode": "VEN", "topTier": false }
+      ]
+    },
+    {
+      "id": "tim",
+      "name": "Tim",
+      "color": "#3b82f6",
+      "teams": [
+        { "fifaCode": "POR", "topTier": true },
+        { "fifaCode": "COL", "topTier": false },
+        { "fifaCode": "TUR", "topTier": false },
+        { "fifaCode": "CPV", "topTier": false },
+        { "fifaCode": "BOL", "topTier": false },
+        { "fifaCode": "NCL", "topTier": false }
+      ]
+    }
+  ]
+}
