@@ -47,7 +47,8 @@ for (const vp of viewports) {
     await page.goto(BASE + cap.url, { waitUntil: 'networkidle' });
     if (cap.wait) await page.waitForTimeout(cap.wait);
     await page.getByRole('button', { name: cap.tab }).click();
-    await page.waitForTimeout(200);
+    // 250ms covers the 180ms fade-in plus a margin for paint
+    await page.waitForTimeout(250);
     const file = `${OUT}/${cap.prefix}-${vp.name}.png`;
     await page.screenshot({ path: file, fullPage: false });
     console.log(`  wrote ${file}`);

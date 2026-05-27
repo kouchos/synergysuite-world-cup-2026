@@ -1,8 +1,10 @@
 <script>
   import { onMount } from 'svelte';
+  import { fade } from 'svelte/transition';
   import { store } from './lib/state/store.svelte.js';
   import Header from './components/Header.svelte';
   import ViewTabs from './components/ViewTabs.svelte';
+  import Countdown from './components/Countdown.svelte';
   import PoolView from './views/PoolView.svelte';
   import KnockoutView from './views/KnockoutView.svelte';
   import WinnersView from './views/WinnersView.svelte';
@@ -43,14 +45,21 @@
 <div class="min-h-screen flex flex-col">
   <Header state={store.state} employees={store.employees} />
   <ViewTabs value={store.view} phase={store.phase} onSelect={selectView} />
+  <Countdown snapshot={store.state} />
 
   <main class="flex-1">
     {#if store.view === 'group'}
-      <PoolView state={store.state} employees={store.employees} />
+      <div in:fade={{ duration: 180 }}>
+        <PoolView state={store.state} employees={store.employees} />
+      </div>
     {:else if store.view === 'knockout'}
-      <KnockoutView state={store.state} employees={store.employees} />
+      <div in:fade={{ duration: 180 }}>
+        <KnockoutView state={store.state} employees={store.employees} />
+      </div>
     {:else}
-      <WinnersView state={store.state} employees={store.employees} />
+      <div in:fade={{ duration: 180 }}>
+        <WinnersView state={store.state} employees={store.employees} />
+      </div>
     {/if}
   </main>
 

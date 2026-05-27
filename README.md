@@ -21,24 +21,21 @@ A persistent header keeps the four current leaders visible at all times. Three v
 
 ## Status
 
-Checkpoint 1 of an incremental build:
+Build is feature-complete and waiting on real-tournament data:
 
 - [x] Project scaffold (Vite + Svelte 5 + Tailwind 4)
-- [x] `config/employees.json` schema with placeholder picks
-- [x] Mock data fixture exercising all four prizes
-- [x] Persistent 4-tile header
-- [x] Always-visible Pool/Knockout/Winners tab strip
-- [x] Pool view with group tables + live/upcoming/recent strip
-- [x] GitHub Pages deploy workflow
-- [x] Playwright screenshot script (`npm run screenshots`)
-- [x] Knockout view bracket (R32 → R16 → QF → SF → Final + 3rd place, with TBD slots)
-- [x] Winners view with champion hero + 3 secondary prize cards
-- [x] `MOCK_STATE_FINAL` for previewing the post-tournament state (`?mock=final`)
-- [x] ESPN adapter wired to the store with adaptive refresh (60s live / 5min matchday / 30min idle)
-- [x] openfootball baseline integration (fixtures pulled at runtime, cached 6h)
-- [x] localStorage cache with stale-while-revalidate (`lib/cache.js`)
-- [x] Footer sync indicator + last-error fallback
-- [ ] Transitions / countdown / polish
+- [x] `config/employees.json` driving everything — real spreadsheet picks wired in
+- [x] Persistent 4-tile prize header + auto-switching view tabs
+- [x] Pool view: group tables with owner colour stripes + live/upcoming/recent sidebar
+- [x] Knockout bracket: R32 → R16 → QF → SF → Final + 3rd place, TBD slots before the draw resolves
+- [x] Winners view: champion hero + three secondary prize cards
+- [x] Next-match countdown banner (live-score banner when a match is in play)
+- [x] Subtle fade transitions between views
+- [x] ESPN adapter + openfootball baseline + localStorage stale-while-revalidate cache
+- [x] Adaptive refresh: 60s live · 5min matchday · 30min off-period
+- [x] Footer sync indicator + per-source diagnostics + "using cached data" fallback
+- [x] Two mock fixtures (`?mock=1` mid-tournament, `?mock=final` end-state)
+- [x] GitHub Pages deploy workflow + Playwright screenshot script
 
 ## Local development
 
@@ -70,6 +67,44 @@ config/employees.json       →  apply owner mapping
 ```
 
 The adapter is the only file that knows ESPN field names — if ESPN ever breaks, swap `lib/data/adapter.js` for an API-Football Pro implementation without touching the views.
+
+### Footer diagnostics
+
+The footer's source label reports which data sources are actually feeding the UI:
+
+| Footer says | Means |
+| --- | --- |
+| `openfootball + ESPN · synced HH:MM:SS` | Both sources reachable. Live scores overlaid on baseline fixtures. |
+| `openfootball · ESPN unreachable · synced HH:MM:SS` | ESPN failed (404/timeout/CORS). The view falls back to the openfootball schedule with no live overlay. Adapter likely needs a tweak — see below. |
+| `no data sources reachable` | Both endpoints failed and no localStorage cache. UI keeps the last good snapshot if one exists, otherwise the mock baseline. |
+| `mock data` / `mock (final state)` | Forced via `?mock=1` / `?mock=final`. Network was never attempted. |
+
+`· using cached data` appended in red means the last refresh erred — we're serving stale localStorage entries while we keep trying.
+
+### If ESPN goes wrong
+
+Three things tend to break ESPN's hidden API:
+
+1. **Wrong league slug.** Currently `/soccer/fifa.world/`. If scoreboard returns 404, try `/soccer/fifa.worldcup/` or `/soccer/fifa.worldcup.2026/` in `src/lib/data/espn.js`.
+2. **Team abbreviation mismatch.** ESPN sometimes uses `SAU` for Saudi Arabia (FIFA: `KSA`) or `IRI` for Iran (FIFA: `IRN`). Drop an alias map at the top of `src/lib/data/adapter.js` and translate inside `teamCodeFromCompetitor()`.
+3. **Round labels.** Knockout detection reads `competition.notes[].headline`. If ESPN labels them differently the date-based fallback (`>= 27 June` = knockout) still bins matches into the right stage — they just won't get a round name. Update `KNOCKOUT_PATTERNS` in `adapter.js` to match the new strings.
+
+### Swapping the adapter to API-Football Pro
+
+If ESPN becomes uncooperative, replace `lib/data/adapter.js`:
+
+```js
+// pseudo-sketch — API-Football Pro
+const HEADERS = { 'x-apisports-key': import.meta.env.VITE_APIFOOTBALL_KEY };
+
+export async function fetchLiveState() {
+  const fixtures = await fetch('https://v3.football.api-sports.io/fixtures?league=1&season=2026', { headers: HEADERS }).then(r => r.json());
+  const standings = await fetch('https://v3.football.api-sports.io/standings?league=1&season=2026', { headers: HEADERS }).then(r => r.json());
+  // ... normalise into the same State shape the views expect
+}
+```
+
+The views, store, prize derivations, and mock fixtures stay untouched — they only consume the State shape produced here. Put the key in repo Secrets and wire it through the workflow as `VITE_APIFOOTBALL_KEY`.
 
 ### Capturing screenshots
 

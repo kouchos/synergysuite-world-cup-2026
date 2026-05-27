@@ -328,6 +328,9 @@ export const MOCK_STATE_FINAL = {
   ...MOCK_STATE,
   phase: 'winners',
   lastUpdated: new Date('2026-07-19T22:30:00+01:00').toISOString(),
+  // All group fixtures are over by the time the tournament ends — clamp any
+  // live/scheduled ones to final so the countdown / live banner stay quiet.
+  fixtures: MOCK_STATE.fixtures.map((f) => ({ ...f, status: 'final', minute: null })),
   // Group standings remain as they were at end of group stage — no further changes.
   // The big difference is the bracket is now fully resolved.
   knockoutMatches: [
