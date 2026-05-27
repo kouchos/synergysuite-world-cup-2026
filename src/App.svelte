@@ -18,7 +18,19 @@
   const sourceLabel = $derived.by(() => {
     if (store.mode === 'mock') return 'mock data';
     if (store.mode === 'mock-final') return 'mock (final state)';
-    return 'ESPN';
+    const d = store.diagnostics;
+    if (!d) return 'live';
+    const ok = [];
+    const fail = [];
+    const tag = (name, src) => {
+      if (src === 'network' || src === 'cache') ok.push(name);
+      else if (src === 'none' || src === 'stale') fail.push(name);
+    };
+    tag('openfootball', d.sources?.baseline);
+    tag('ESPN', d.sources?.scoreboard);
+    if (!ok.length) return 'no data sources reachable';
+    const failNote = fail.length ? ` · ${fail.join(' + ')} unreachable` : '';
+    return `${ok.join(' + ')}${failNote}`;
   });
 
   const syncLabel = $derived.by(() => {

@@ -21,20 +21,31 @@ const captures = [
   { url: '/?mock=1',     tab: 'Winners',         prefix: 'winners' },
   { url: '/?mock=final', tab: 'Knockout ladder', prefix: 'knockout-final' },
   { url: '/?mock=final', tab: 'Winners',         prefix: 'winners-final' },
+  // Live data — fetches openfootball + ESPN at runtime. Waits 3s for the
+  // first refresh to finish so the screenshot reflects real data.
+  { url: '/',            tab: 'Pool stage',      prefix: 'live-group',    wait: 3000 },
+  { url: '/',            tab: 'Knockout ladder', prefix: 'live-knockout', wait: 3000 },
 ];
 
 await mkdir(OUT, { recursive: true });
-const browser = await chromium.launch();
+// --ignore-certificate-errors so the live-data captures work inside the remote
+// sandbox (transparent proxy uses a CA the browser doesn't trust). No-op for
+// normal local runs or CI.
+const browser = await chromium.launch({
+  args: ['--ignore-certificate-errors'],
+});
 
 for (const vp of viewports) {
   const ctx = await browser.newContext({
     viewport: { width: vp.width, height: vp.height },
     deviceScaleFactor: 1,
+    ignoreHTTPSErrors: true,
   });
   const page = await ctx.newPage();
 
   for (const cap of captures) {
     await page.goto(BASE + cap.url, { waitUntil: 'networkidle' });
+    if (cap.wait) await page.waitForTimeout(cap.wait);
     await page.getByRole('button', { name: cap.tab }).click();
     await page.waitForTimeout(200);
     const file = `${OUT}/${cap.prefix}-${vp.name}.png`;

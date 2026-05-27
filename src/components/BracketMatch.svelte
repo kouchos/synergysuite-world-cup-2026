@@ -1,18 +1,20 @@
 <script>
-  import { teamFor } from '../lib/data/teams.js';
+  import { TEAMS, teamFor } from '../lib/data/teams.js';
   import { formatTime } from '../lib/format.js';
 
   let { match, employees } = $props();
 
   function ownerOf(code) {
-    if (!code) return null;
+    if (!code || !TEAMS[code]) return null;
     return employees?.find((e) => e.teams.some((t) => t.fifaCode === code)) ?? null;
   }
 
+  const homeKnown = $derived(match.home && Boolean(TEAMS[match.home]));
+  const awayKnown = $derived(match.away && Boolean(TEAMS[match.away]));
   const homeOwner = $derived(ownerOf(match.home));
   const awayOwner = $derived(ownerOf(match.away));
-  const homeTeam = $derived(match.home ? teamFor(match.home) : null);
-  const awayTeam = $derived(match.away ? teamFor(match.away) : null);
+  const homeTeam = $derived(homeKnown ? teamFor(match.home) : null);
+  const awayTeam = $derived(awayKnown ? teamFor(match.away) : null);
   const isFinal = $derived(match.status === 'final');
   const isLive = $derived(match.status === 'live');
   const isScheduled = $derived(match.status === 'scheduled');
@@ -37,6 +39,11 @@
           {match.homeGoals}
         {/if}
       </span>
+    {:else if match.home}
+      <span class="ml-2 text-[10px] italic text-stone-400">{match.home}</span>
+      {#if isScheduled}
+        <span class="ml-auto text-[10px] font-medium text-stone-400">{formatTime(match.utc)}</span>
+      {/if}
     {:else}
       <span class="ml-2 text-xs italic text-stone-500">TBD</span>
       {#if isScheduled}
@@ -61,6 +68,8 @@
       {#if isLive}
         <span class="ml-1 text-[10px] font-bold text-rose-300 tabular-nums">{match.minute}'</span>
       {/if}
+    {:else if match.away}
+      <span class="ml-2 text-[10px] italic text-stone-400">{match.away}</span>
     {:else}
       <span class="ml-2 text-xs italic text-stone-500">TBD</span>
     {/if}

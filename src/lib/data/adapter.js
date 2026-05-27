@@ -260,13 +260,13 @@ export async function fetchLiveState() {
   const st = await swr('espn:standings', () => fetchStandings(), standingsTtl);
 
   let fixtures = baseline.fixtures;
-  let knockoutMatches = [];
+  let knockoutMatches = baseline.knockoutMatches ?? [];
   if (sb.value) {
     const partitioned = partitionEvents(sb.value);
-    // Merge ESPN-driven matches over the openfootball baseline by id+team match
-    const merged = mergeFixtures(baseline.fixtures, partitioned.fixtures);
-    fixtures = merged;
-    knockoutMatches = partitioned.knockoutMatches;
+    fixtures = mergeFixtures(baseline.fixtures, partitioned.fixtures);
+    if (partitioned.knockoutMatches.length) {
+      knockoutMatches = mergeKnockouts(knockoutMatches, partitioned.knockoutMatches);
+    }
   }
 
   const groups = st.value ? normaliseStandings(st.value) : baseline.groups;
@@ -285,6 +285,29 @@ export async function fetchLiveState() {
       errors: [sb.error, st.error, baseline.error].filter(Boolean).map(String),
     },
   };
+}
+
+function mergeKnockouts(baseline, espn) {
+  // Match by (round, slot) when ESPN matches that, else by date+pair.
+  const byKey = new Map();
+  for (const b of baseline) byKey.set(`${b.round}|${b.slot}`, b);
+  const out = [...baseline];
+  for (const e of espn) {
+    const k = `${e.round}|${e.slot}`;
+    const existing = byKey.get(k);
+    if (existing) {
+      // Only overwrite home/away if the baseline value was a placeholder
+      const placeholders = !isRealCode(existing.home) || !isRealCode(existing.away);
+      Object.assign(existing, e, placeholders ? {} : { home: existing.home, away: existing.away });
+    } else {
+      out.push(e);
+    }
+  }
+  return out;
+}
+
+function isRealCode(code) {
+  return typeof code === 'string' && /^[A-Z]{3}$/.test(code);
 }
 
 function mergeFixtures(baseline, espn) {
