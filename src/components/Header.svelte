@@ -34,22 +34,20 @@
 
 {#if !active}
   <!-- Pre-tournament hero: no real prize data yet, so don't fake it. -->
-  <header class="px-4 pt-4 space-y-3">
-    {#if logoOk}
-      <div>
-        <div class="inline-flex bg-white rounded-xl p-2 shadow-lg ring-1 ring-white/20">
+  <header class="p-4">
+    <div class="rounded-2xl bg-gradient-to-br from-emerald-500/15 via-pitch-light/60 to-pitch/30 ring-1 ring-emerald-300/20 px-8 py-6 backdrop-blur flex items-center gap-6">
+      {#if logoOk}
+        <div class="flex-shrink-0 bg-white rounded-lg p-1.5 shadow-md">
           <img
             src={`${import.meta.env.BASE_URL}synergysuite-wc-logo.png`}
             alt="SynergySuite World Cup 2026"
-            class="h-12 md:h-14 lg:h-16 w-auto block"
+            class="h-14 md:h-16 lg:h-20 w-auto block"
             onerror={() => (logoOk = false)}
           />
         </div>
-      </div>
-    {/if}
-
-    <div class="rounded-2xl bg-gradient-to-br from-emerald-500/15 via-pitch-light/60 to-pitch/30 ring-1 ring-emerald-300/20 px-8 py-6 backdrop-blur flex items-center gap-6">
-      <div class="text-5xl">⚽</div>
+      {:else}
+        <div class="text-5xl">⚽</div>
+      {/if}
       <div class="flex-1">
         <div class="text-emerald-200/80 text-xs uppercase tracking-[0.3em] font-bold mb-1">
           World Cup 2026 — Sweepstake live tracker
@@ -85,21 +83,7 @@
     </div>
   </header>
 {:else}
-  <header class="px-4 pt-4 space-y-3">
-    {#if logoOk}
-      <div>
-        <div class="inline-flex bg-white rounded-xl p-2 shadow-lg ring-1 ring-white/20">
-          <img
-            src={`${import.meta.env.BASE_URL}synergysuite-wc-logo.png`}
-            alt="SynergySuite World Cup 2026"
-            class="h-12 md:h-14 lg:h-16 w-auto block"
-            onerror={() => (logoOk = false)}
-          />
-        </div>
-      </div>
-    {/if}
-
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+  <header class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 p-4">
     <!-- Overall leader -->
     <div class="rounded-2xl bg-pitch-light/60 ring-1 ring-white/10 p-5 backdrop-blur flex flex-col">
       <div class="text-xs uppercase tracking-widest text-emerald-200/80 mb-3">Overall leader</div>
@@ -178,7 +162,6 @@
         </div>
         <div class="mt-3 text-stone-300 text-sm tabular-nums">{boot.goals} goals</div>
       {/if}
-    </div>
     </div>
   </header>
 {/if}
