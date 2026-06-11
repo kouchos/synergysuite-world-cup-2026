@@ -1,9 +1,10 @@
 <script>
   import { onMount } from 'svelte';
-  import { fade, scale } from 'svelte/transition';
+  import { fade, fly } from 'svelte/transition';
   import { modal } from '../lib/state/modal.svelte.js';
+  import { dur } from '../lib/motion.js';
 
-  let { title, accentColor = '#10b981', children } = $props();
+  let { title, accentColor = '#c8f542', children } = $props();
 
   function handleKeydown(e) {
     if (e.key === 'Escape') modal.close();
@@ -25,29 +26,30 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <div
-  class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+  class="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/70 backdrop-blur-sm"
   onclick={handleBackdrop}
-  transition:fade={{ duration: 150 }}
+  transition:fade={{ duration: dur(140) }}
   role="presentation"
 >
+  <!-- Bottom sheet on phones, centered dialog on bigger screens -->
   <div
-    class="max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col bg-pitch-light/95 ring-1 ring-white/15 rounded-2xl shadow-2xl"
-    style:border-top="4px solid {accentColor}"
+    class="max-w-4xl w-full max-h-[92vh] sm:max-h-[88vh] overflow-hidden flex flex-col bg-ink-2 border border-line rounded-t-2xl sm:rounded-xl shadow-2xl"
     role="dialog"
     aria-modal="true"
     aria-labelledby="modal-title"
-    transition:scale={{ duration: 180, start: 0.96 }}
+    transition:fly={{ duration: dur(220), y: 28, opacity: 0 }}
   >
-    <header class="flex items-center justify-between px-6 py-4 border-b border-white/10 flex-shrink-0">
-      <h2 id="modal-title" class="text-2xl font-bold text-white">{title}</h2>
+    <div class="h-1 shrink-0" style:background="linear-gradient(90deg, {accentColor}, color-mix(in srgb, {accentColor} 25%, transparent))"></div>
+    <header class="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-line shrink-0">
+      <h2 id="modal-title" class="type-display text-xl sm:text-2xl">{title}</h2>
       <button
         type="button"
         onclick={() => modal.close()}
-        class="text-stone-400 hover:text-white text-3xl leading-none w-8 h-8 flex items-center justify-center rounded hover:bg-white/10"
+        class="pressable text-fg-mute hover:text-fg text-2xl leading-none w-8 h-8 flex items-center justify-center rounded-md hover:bg-ink-3"
         aria-label="Close"
       >×</button>
     </header>
-    <div class="flex-1 overflow-y-auto p-6">
+    <div class="flex-1 overflow-y-auto p-4 sm:p-6 overscroll-contain">
       {@render children?.()}
     </div>
   </div>

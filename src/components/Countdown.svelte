@@ -51,34 +51,35 @@
 </script>
 
 {#if live}
-  <div class="px-4 py-2 flex items-center justify-center gap-3 text-sm bg-rose-500/10 border-y border-rose-400/20">
-    <span class="inline-flex items-center gap-1.5 text-rose-300 font-bold uppercase tracking-widest text-xs">
-      <span class="w-1.5 h-1.5 rounded-full bg-rose-400 live-dot"></span>
-      Live
+  <div class="mx-3 sm:mx-5 mb-2 card clip-corner overflow-hidden flex items-stretch border-live/40">
+    <span class="flex items-center gap-1.5 px-3 bg-live text-ink type-display text-xs">
+      <span class="live-dot inline-block w-1.5 h-1.5 rounded-full bg-ink"></span>
+      LIVE
     </span>
-    <span class="text-stone-300">·</span>
-    <span class="text-lg">{homeTeam?.flag}</span>
-    <span class="font-semibold text-white">{homeTeam?.name}</span>
-    <span class="font-bold tabular-nums text-white">{live.homeGoals}</span>
-    <span class="text-stone-400">–</span>
-    <span class="font-bold tabular-nums text-white">{live.awayGoals}</span>
-    <span class="font-semibold text-white">{awayTeam?.name}</span>
-    <span class="text-lg">{awayTeam?.flag}</span>
-    {#if live.minute != null}
-      <span class="text-stone-300">·</span>
-      <span class="font-bold tabular-nums text-rose-200">{live.minute}'</span>
-    {/if}
+    <div class="flex-1 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-0.5 px-3 py-1.5">
+      <span class="text-lg leading-none" aria-hidden="true">{homeTeam?.flag}</span>
+      <span class="font-semibold text-sm">{homeTeam?.name}</span>
+      {#key `${live.homeGoals}-${live.awayGoals}`}
+        <span class="score-pop type-display text-xl text-fg tnum">{live.homeGoals}<span class="text-fg-faint mx-0.5">–</span>{live.awayGoals}</span>
+      {/key}
+      <span class="font-semibold text-sm">{awayTeam?.name}</span>
+      <span class="text-lg leading-none" aria-hidden="true">{awayTeam?.flag}</span>
+      {#if live.minute != null}
+        <span class="type-display text-sm text-live tnum">{live.minute}'</span>
+      {/if}
+    </div>
   </div>
 {:else if upcoming}
-  <div class="px-4 py-2 flex items-center justify-center gap-3 text-sm border-y border-white/5">
-    <span class="text-emerald-200/70 font-bold uppercase tracking-widest text-xs">Next match</span>
-    <span class="text-stone-400">·</span>
-    <span class="text-lg">{homeTeam?.flag}</span>
-    <span class="font-semibold text-white">{homeTeam?.name}</span>
-    <span class="text-stone-400">vs</span>
-    <span class="font-semibold text-white">{awayTeam?.name}</span>
-    <span class="text-lg">{awayTeam?.flag}</span>
-    <span class="text-stone-400">·</span>
-    <span class="font-bold tabular-nums text-emerald-200">kickoff in {countdown}</span>
+  <div class="mx-3 sm:mx-5 mb-2 card clip-corner overflow-hidden flex items-stretch">
+    <span class="flex items-center px-3 bg-volt text-ink type-display text-xs whitespace-nowrap">Next match</span>
+    <div class="flex-1 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-0.5 px-3 py-1.5">
+      <span class="text-lg leading-none" aria-hidden="true">{homeTeam?.flag}</span>
+      <span class="font-semibold text-sm">{homeTeam?.name}</span>
+      <span class="type-kicker text-fg-faint">vs</span>
+      <span class="font-semibold text-sm">{awayTeam?.name}</span>
+      <span class="text-lg leading-none" aria-hidden="true">{awayTeam?.flag}</span>
+      <span class="text-fg-faint hidden sm:inline">·</span>
+      <span class="type-display text-base text-volt tnum">{countdown}</span>
+    </div>
   </div>
 {/if}

@@ -126,117 +126,118 @@
   const espnTeam = $derived(teamData?.team ?? null);
   const record = $derived(espnTeam?.record?.items?.[0]?.summary ?? null);
   const recordStats = $derived(espnTeam?.record?.items?.[0]?.stats ?? []);
-  const nextEvent = $derived(espnTeam?.nextEvent?.[0] ?? null);
 
-  const accent = $derived(teamRef?.color ?? '#10b981');
+  const accent = $derived(teamRef?.color ?? '#c8f542');
 </script>
 
 <Modal title={team.name} accentColor={accent}>
   <!-- Hero -->
-  <section class="rounded-2xl bg-pitch/40 ring-1 ring-white/5 p-6 mb-5 flex items-center gap-5">
-    <div class="text-8xl leading-none flex-shrink-0">{team.flag}</div>
+  <section class="card clip-corner p-5 mb-5 flex items-center gap-4 sm:gap-5">
+    <div class="text-6xl sm:text-7xl leading-none shrink-0" aria-hidden="true">{team.flag}</div>
     <div class="flex-1 min-w-0">
-      <div class="text-stone-300 text-xs uppercase tracking-widest font-bold mb-1">
+      <div class="type-kicker text-fg-mute mb-1.5">
         {pick?.topTier ? 'Top-tier pick' : 'Team'}
-        {#if standing}<span class="text-stone-500"> · Group {standing.groupId}</span>{/if}
+        {#if standing}<span class="text-fg-faint"> · Group {standing.groupId}</span>{/if}
       </div>
-      <div class="text-4xl font-bold leading-tight">{team.name}</div>
+      <div class="type-display text-3xl sm:text-4xl leading-[0.9]">{team.name}</div>
       {#if owner}
         <button
           type="button"
-          class="mt-2 inline-flex items-center gap-2 group"
+          class="mt-2.5 inline-flex items-center gap-2 pressable"
           onclick={() => navigateEmployee(owner.id)}
         >
-          <span class="text-stone-400 text-sm">Sweepstake owner</span>
-          <span class="text-stone-500">→</span>
-          <span class="font-semibold px-3 py-1 rounded-full text-white group-hover:ring-2 group-hover:ring-white/40"
-            style:background-color={owner.color}>{owner.name}</span>
+          <span class="type-kicker text-fg-faint">Sweepstake owner</span>
+          <span class="text-fg-faint" aria-hidden="true">→</span>
+          <span class="font-bold px-2.5 py-0.5 rounded text-xs type-cond uppercase tracking-wide"
+            style:background="color-mix(in srgb, {owner.color} 16%, transparent)"
+            style:border="1px solid color-mix(in srgb, {owner.color} 45%, transparent)"
+            style:color={owner.color}>{owner.name}</span>
         </button>
       {/if}
     </div>
     {#if teamRef?.logoUrl}
-      <img src={teamRef.logoUrl} alt="" class="w-20 h-20 object-contain flex-shrink-0 opacity-80" />
+      <img src={teamRef.logoUrl} alt="" class="w-16 h-16 sm:w-20 sm:h-20 object-contain shrink-0 opacity-85" />
     {/if}
   </section>
 
   <!-- Tab strip -->
-  <nav class="flex gap-2 mb-4 border-b border-white/10">
+  <nav class="flex gap-1 mb-4 border-b border-line overflow-x-auto">
     {#each tabs as t (t.id)}
       <button
         type="button"
         onclick={() => (activeTab = t.id)}
-        class="px-4 py-2 text-sm font-semibold border-b-2 transition-colors
-          {activeTab === t.id ? 'border-emerald-400 text-emerald-200' : 'border-transparent text-stone-400 hover:text-stone-200'}"
+        class="px-3.5 py-2 type-display text-[13px] border-b-2 transition-colors whitespace-nowrap
+          {activeTab === t.id ? 'border-volt text-volt' : 'border-transparent text-fg-faint hover:text-fg-mute'}"
       >{t.label}</button>
     {/each}
   </nav>
 
   <!-- Tabs body -->
   {#if activeTab === 'overview'}
-    <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div class="rounded-xl bg-pitch/40 ring-1 ring-white/5 p-4">
-        <h3 class="text-xs uppercase tracking-widest text-emerald-200/80 font-bold mb-3">Group performance</h3>
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div class="card-raised p-4">
+        <h3 class="type-kicker text-volt kicker-slash mb-3">Group performance</h3>
         {#if standing}
           <div class="grid grid-cols-4 gap-3 text-center">
             <div>
-              <div class="text-2xl font-bold tabular-nums">{standing.pts}</div>
-              <div class="text-xs text-stone-400 uppercase">Pts</div>
+              <div class="type-display text-2xl tnum">{standing.pts}</div>
+              <div class="type-kicker text-fg-faint mt-1">Pts</div>
             </div>
             <div>
-              <div class="text-2xl font-bold tabular-nums">{standing.p}</div>
-              <div class="text-xs text-stone-400 uppercase">P</div>
+              <div class="type-display text-2xl tnum">{standing.p}</div>
+              <div class="type-kicker text-fg-faint mt-1">P</div>
             </div>
             <div>
-              <div class="text-2xl font-bold tabular-nums {standing.gd >= 0 ? 'text-emerald-200' : 'text-rose-200'}">{standing.gd >= 0 ? '+' : ''}{standing.gd}</div>
-              <div class="text-xs text-stone-400 uppercase">GD</div>
+              <div class="type-display text-2xl tnum {standing.gd >= 0 ? 'text-volt' : 'text-live'}">{standing.gd >= 0 ? '+' : ''}{standing.gd}</div>
+              <div class="type-kicker text-fg-faint mt-1">GD</div>
             </div>
             <div>
-              <div class="text-2xl font-bold tabular-nums">{standing.gf}</div>
-              <div class="text-xs text-stone-400 uppercase">GF</div>
+              <div class="type-display text-2xl tnum">{standing.gf}</div>
+              <div class="type-kicker text-fg-faint mt-1">GF</div>
             </div>
           </div>
-          <div class="mt-3 grid grid-cols-3 gap-2 text-center text-sm tabular-nums">
-            <div class="bg-pitch-light/30 rounded py-1"><span class="text-emerald-300 font-bold">{standing.w}W</span></div>
-            <div class="bg-pitch-light/30 rounded py-1"><span class="text-stone-300 font-bold">{standing.d}D</span></div>
-            <div class="bg-pitch-light/30 rounded py-1"><span class="text-rose-300 font-bold">{standing.l}L</span></div>
+          <div class="mt-3 grid grid-cols-3 gap-2 text-center text-sm tnum">
+            <div class="bg-ink-4/60 rounded py-1"><span class="text-volt font-bold">{standing.w}W</span></div>
+            <div class="bg-ink-4/60 rounded py-1"><span class="text-fg-mute font-bold">{standing.d}D</span></div>
+            <div class="bg-ink-4/60 rounded py-1"><span class="text-live font-bold">{standing.l}L</span></div>
           </div>
         {:else}
-          <p class="text-stone-400 italic text-sm">Group stage hasn't started.</p>
+          <p class="text-fg-faint text-sm">Group stage hasn't started.</p>
         {/if}
       </div>
 
-      <div class="rounded-xl bg-pitch/40 ring-1 ring-white/5 p-4">
-        <h3 class="text-xs uppercase tracking-widest text-emerald-200/80 font-bold mb-3">ESPN record</h3>
+      <div class="card-raised p-4">
+        <h3 class="type-kicker text-volt kicker-slash mb-3">ESPN record</h3>
         {#if loading && !record}
-          <p class="text-stone-400 italic text-sm">Loading…</p>
+          <p class="text-fg-faint text-sm">Loading…</p>
         {:else if record}
-          <div class="text-3xl font-bold tabular-nums">{record}</div>
+          <div class="type-display text-3xl tnum">{record}</div>
           <div class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
             {#each recordStats.slice(0, 6) as stat}
-              <div class="flex justify-between border-b border-white/5 py-0.5">
-                <span class="text-stone-400">{stat.shortDisplayName ?? stat.displayName ?? stat.name}</span>
-                <span class="tabular-nums font-semibold">{stat.displayValue ?? stat.value}</span>
+              <div class="flex justify-between border-b border-line/60 py-0.5">
+                <span class="text-fg-faint">{stat.shortDisplayName ?? stat.displayName ?? stat.name}</span>
+                <span class="tnum font-semibold">{stat.displayValue ?? stat.value}</span>
               </div>
             {/each}
           </div>
         {:else}
-          <p class="text-stone-400 italic text-sm">No ESPN record data.</p>
+          <p class="text-fg-faint text-sm">No ESPN record data.</p>
         {/if}
       </div>
     </section>
   {:else if activeTab === 'roster'}
     <section>
       {#if rosterLoading && !rosterData}
-        <p class="text-stone-400 italic text-sm text-center py-6">Loading squad…</p>
+        <p class="text-fg-faint text-sm text-center py-6">Loading squad…</p>
       {:else if rosterGroups.length === 0}
-        <p class="text-stone-400 italic text-sm text-center py-6">
+        <p class="text-fg-faint text-sm text-center py-6">
           {teamRef?.espnId ? 'No squad data available from ESPN.' : 'ESPN team ID not yet known — try again once a match has been played.'}
         </p>
       {:else}
         <div class="space-y-5">
           {#each rosterGroups as group (group.label)}
             <div>
-              <h3 class="text-xs font-bold uppercase tracking-widest text-emerald-200/80 mb-2">{group.label} <span class="text-stone-500 font-normal">({group.players.length})</span></h3>
+              <h3 class="type-kicker text-fg-mute kicker-slash mb-2">{group.label} <span class="text-fg-faint font-normal">({group.players.length})</span></h3>
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {#each group.players as p (p.id ?? p.name)}
                   <PlayerCard player={p} />
@@ -250,7 +251,7 @@
   {:else if activeTab === 'schedule'}
     <section>
       {#if teamFixtures.length === 0}
-        <p class="text-stone-400 italic text-sm">No fixtures yet.</p>
+        <p class="text-fg-faint text-sm">No fixtures yet.</p>
       {:else}
         <div class="space-y-1.5">
           {#each teamFixtures as m (m.id)}
@@ -258,20 +259,20 @@
             {@const at = TEAMS[m.away] ? teamFor(m.away) : null}
             <button
               type="button"
-              class="w-full text-left rounded-lg bg-pitch/40 ring-1 ring-white/5 px-3 py-2 hover:bg-pitch/60 hover:ring-white/20 disabled:hover:bg-pitch/40 disabled:cursor-default transition-colors flex items-center gap-3 text-sm"
+              class="w-full text-left card-raised lift px-3 py-2 disabled:cursor-default flex items-center gap-3 text-sm"
               onclick={() => navigateGame(m.id)}
               disabled={!store.espnReachable}
             >
-              <span class="w-24 text-xs text-stone-400 tabular-nums flex-shrink-0">{formatKickoff(m.utc)}</span>
-              {#if ht}<span>{ht.flag}</span><span class="font-medium truncate w-32 text-right">{ht.name}</span>{:else}<span class="text-stone-500 italic truncate w-32 text-right">{m.home ?? 'TBD'}</span>{/if}
-              <span class="text-center w-16 font-bold tabular-nums">
-                {#if m.status === 'scheduled'}vs{:else}{m.homeGoals}–{m.awayGoals}{/if}
+              <span class="w-24 text-xs text-fg-faint tnum type-cond shrink-0">{formatKickoff(m.utc)}</span>
+              {#if ht}<span aria-hidden="true">{ht.flag}</span><span class="font-medium truncate w-32 text-right">{ht.name}</span>{:else}<span class="text-fg-faint truncate w-32 text-right">{m.home ?? 'TBD'}</span>{/if}
+              <span class="text-center w-16 type-display tnum text-base">
+                {#if m.status === 'scheduled'}<span class="type-kicker text-fg-faint not-italic">vs</span>{:else}{m.homeGoals}–{m.awayGoals}{/if}
               </span>
-              {#if at}<span class="font-medium truncate w-32">{at.name}</span><span>{at.flag}</span>{:else}<span class="text-stone-500 italic truncate w-32">{m.away ?? 'TBD'}</span>{/if}
+              {#if at}<span class="font-medium truncate w-32">{at.name}</span><span aria-hidden="true">{at.flag}</span>{:else}<span class="text-fg-faint truncate w-32">{m.away ?? 'TBD'}</span>{/if}
               {#if m.status === 'live'}
-                <span class="ml-auto text-rose-300 text-xs font-bold tabular-nums">{m.minute}'</span>
+                <span class="ml-auto text-live text-xs type-display tnum">{m.minute}'</span>
               {:else if m.status === 'final'}
-                <span class="ml-auto text-stone-400 text-xs">FT</span>
+                <span class="ml-auto type-kicker text-fg-faint">FT</span>
               {/if}
             </button>
           {/each}
@@ -281,45 +282,45 @@
   {:else if activeTab === 'group'}
     <section>
       {#if standing}
-        <div class="rounded-xl bg-pitch/40 ring-1 ring-white/5 p-4">
-          <div class="text-xs uppercase tracking-widest text-emerald-200/80 font-bold mb-3">Group {standing.groupId} table</div>
+        <div class="card-raised p-4">
+          <div class="type-kicker text-volt kicker-slash mb-3">Group {standing.groupId} table</div>
           <table class="w-full text-sm">
             <thead>
-              <tr class="text-stone-400 text-left">
-                <th class="font-medium pb-2">Team</th>
-                <th class="font-medium pb-2 text-right w-8">P</th>
-                <th class="font-medium pb-2 text-right w-10">GD</th>
-                <th class="font-medium pb-2 text-right w-10">Pts</th>
+              <tr class="type-kicker text-fg-faint text-left">
+                <th class="font-[650] pb-2" scope="col">Team</th>
+                <th class="font-[650] pb-2 text-right w-8" scope="col">P</th>
+                <th class="font-[650] pb-2 text-right w-10" scope="col">GD</th>
+                <th class="font-[650] pb-2 text-right w-10" scope="col">Pts</th>
               </tr>
             </thead>
             <tbody>
-              <tr class="border-t border-white/5 bg-emerald-400/10">
+              <tr class="border-t border-line bg-volt/8">
                 <td class="py-2">
-                  <span class="inline-flex items-center gap-2"><span>{team.flag}</span><span class="font-bold">{team.name}</span></span>
+                  <span class="inline-flex items-center gap-2"><span aria-hidden="true">{team.flag}</span><span class="font-bold">{team.name}</span></span>
                 </td>
-                <td class="text-right tabular-nums">{standing.p}</td>
-                <td class="text-right tabular-nums">{standing.gd >= 0 ? '+' : ''}{standing.gd}</td>
-                <td class="text-right tabular-nums font-bold">{standing.pts}</td>
+                <td class="text-right tnum">{standing.p}</td>
+                <td class="text-right tnum">{standing.gd >= 0 ? '+' : ''}{standing.gd}</td>
+                <td class="text-right tnum font-bold">{standing.pts}</td>
               </tr>
               {#each groupMates as gm (gm.fifaCode)}
-                <tr class="border-t border-white/5">
+                <tr class="border-t border-line/60">
                   <td class="py-2">
-                    <button type="button" class="inline-flex items-center gap-2 hover:text-emerald-200 disabled:hover:text-current disabled:cursor-default"
+                    <button type="button" class="inline-flex items-center gap-2 pressable hover:text-volt disabled:hover:text-current disabled:cursor-default"
                       onclick={() => navigateTeam(gm.fifaCode)} disabled={!store.espnReachable}>
-                      <span>{gm.info.flag}</span>
+                      <span aria-hidden="true">{gm.info.flag}</span>
                       <span>{gm.info.name}</span>
                     </button>
                   </td>
-                  <td class="text-right tabular-nums">{gm.p}</td>
-                  <td class="text-right tabular-nums">{gm.gd >= 0 ? '+' : ''}{gm.gd}</td>
-                  <td class="text-right tabular-nums font-bold">{gm.pts}</td>
+                  <td class="text-right tnum">{gm.p}</td>
+                  <td class="text-right tnum">{gm.gd >= 0 ? '+' : ''}{gm.gd}</td>
+                  <td class="text-right tnum font-bold">{gm.pts}</td>
                 </tr>
               {/each}
             </tbody>
           </table>
         </div>
       {:else}
-        <p class="text-stone-400 italic text-sm">No group data.</p>
+        <p class="text-fg-faint text-sm">No group data.</p>
       {/if}
     </section>
   {/if}

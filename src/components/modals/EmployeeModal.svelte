@@ -127,84 +127,84 @@
 {#if employee}
   <Modal title={employee.name} accentColor={employee.color}>
     <!-- Hero -->
-    <section class="rounded-2xl p-6 mb-6 flex items-center gap-5"
-      style:background="linear-gradient(135deg, {employee.color}33, transparent)">
+    <section class="card clip-corner p-5 mb-5 flex items-center gap-5"
+      style:background="linear-gradient(135deg, color-mix(in srgb, {employee.color} 16%, var(--color-ink-2)), var(--color-ink-2) 65%)">
       <div
-        class="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl font-bold shadow-lg flex-shrink-0"
+        class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl flex items-center justify-center type-display text-3xl sm:text-4xl shadow-lg shrink-0 text-ink"
         style:background-color={employee.color}
       >
         {employee.name[0]}
       </div>
-      <div>
-        <div class="text-stone-300 text-xs uppercase tracking-widest font-bold mb-1">Sweepstake player</div>
-        <div class="text-4xl font-bold leading-tight">{employee.name}</div>
+      <div class="min-w-0">
+        <div class="type-kicker text-fg-mute mb-1.5">Sweepstake player</div>
+        <div class="type-display text-3xl sm:text-4xl leading-[0.9]">{employee.name}</div>
         {#if overallRow}
-          <div class="mt-2 text-stone-300">
-            {overallRow.pts} pts &middot; GD {overallRow.gd >= 0 ? '+' : ''}{overallRow.gd} &middot;
-            <span class="text-white font-semibold">{ord(overallRank)} place overall</span>
+          <div class="mt-2 text-fg-mute text-sm tnum type-cond">
+            {overallRow.pts} pts · GD {overallRow.gd >= 0 ? '+' : ''}{overallRow.gd} ·
+            <span class="text-volt font-bold">{ord(overallRank)} place overall</span>
           </div>
         {/if}
       </div>
     </section>
 
     <!-- Prize positions -->
-    <section class="mb-6">
-      <h3 class="text-sm font-bold uppercase tracking-widest text-emerald-200/80 mb-3">Prize positions</h3>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div class="rounded-xl bg-pitch/40 ring-1 ring-white/5 p-4">
-          <div class="text-xs uppercase tracking-wider text-emerald-200/70 font-bold">Overall</div>
-          <div class="text-3xl font-bold tabular-nums mt-1">{ord(overallRank)}</div>
+    <section class="mb-5">
+      <h3 class="type-kicker text-fg-mute kicker-slash mb-3">Prize positions</h3>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <div class="card-raised p-3.5">
+          <div class="type-kicker text-volt">Overall</div>
+          <div class="type-display text-2xl tnum mt-1.5">{ord(overallRank)}</div>
           {#if bestOverall}
-            <button type="button" class="mt-2 inline-flex items-center gap-1.5 text-sm hover:text-emerald-200" onclick={() => navigateTeam(bestOverall.fifaCode)} disabled={!store.espnReachable}>
-              <span>{bestOverall.info.flag}</span>
-              <span class="text-stone-300">{bestOverall.info.name}</span>
+            <button type="button" class="mt-2 inline-flex items-center gap-1.5 text-sm pressable text-fg-mute hover:text-fg" onclick={() => navigateTeam(bestOverall.fifaCode)} disabled={!store.espnReachable}>
+              <span aria-hidden="true">{bestOverall.info.flag}</span>
+              <span>{bestOverall.info.name}</span>
             </button>
           {/if}
         </div>
 
-        <div class="rounded-xl bg-pitch/40 ring-1 ring-white/5 p-4">
-          <div class="text-xs uppercase tracking-wider text-rose-200/70 font-bold">Worst team</div>
+        <div class="card-raised p-3.5">
+          <div class="type-kicker text-live/90">Worst team</div>
           {#if worst && worst.owner?.id === employeeId}
-            <div class="text-3xl font-bold tabular-nums mt-1 text-rose-200">🥄</div>
-            <div class="text-xs text-stone-400 mt-1">Currently leading</div>
+            <div class="type-display text-2xl mt-1.5 text-live">🥄</div>
+            <div class="text-xs text-fg-faint mt-1">Currently leading</div>
           {:else}
-            <div class="text-3xl font-bold tabular-nums mt-1">—</div>
+            <div class="type-display text-2xl tnum mt-1.5 text-fg-faint">—</div>
           {/if}
           {#if worstOwned}
-            <button type="button" class="mt-2 inline-flex items-center gap-1.5 text-sm hover:text-rose-200" onclick={() => navigateTeam(worstOwned.fifaCode)} disabled={!store.espnReachable}>
-              <span>{worstOwned.info.flag}</span>
-              <span class="text-stone-300">{worstOwned.info.name}</span>
+            <button type="button" class="mt-2 inline-flex items-center gap-1.5 text-sm pressable text-fg-mute hover:text-fg" onclick={() => navigateTeam(worstOwned.fifaCode)} disabled={!store.espnReachable}>
+              <span aria-hidden="true">{worstOwned.info.flag}</span>
+              <span>{worstOwned.info.name}</span>
             </button>
           {/if}
         </div>
 
-        <div class="rounded-xl bg-pitch/40 ring-1 ring-white/5 p-4">
-          <div class="text-xs uppercase tracking-wider text-amber-200/70 font-bold">Most cards</div>
-          <div class="text-3xl font-bold tabular-nums mt-1">{ord(cardsRank)}</div>
+        <div class="card-raised p-3.5">
+          <div class="type-kicker text-gold/90">Most cards</div>
+          <div class="type-display text-2xl tnum mt-1.5">{ord(cardsRank)}</div>
           {#if cardsRow}
-            <div class="text-xs text-stone-400 mt-1">{cardsRow.points} pts</div>
+            <div class="text-xs text-fg-faint mt-1 tnum">{cardsRow.points} pts</div>
           {/if}
           {#if cardLeaderTeam}
-            <button type="button" class="mt-2 inline-flex items-center gap-1.5 text-sm hover:text-amber-200" onclick={() => navigateTeam(cardLeaderTeam.team.fifaCode)} disabled={!store.espnReachable}>
-              <span>{cardLeaderTeam.team.info.flag}</span>
-              <span class="text-stone-300">{cardLeaderTeam.team.info.name}</span>
+            <button type="button" class="mt-2 inline-flex items-center gap-1.5 text-sm pressable text-fg-mute hover:text-fg" onclick={() => navigateTeam(cardLeaderTeam.team.fifaCode)} disabled={!store.espnReachable}>
+              <span aria-hidden="true">{cardLeaderTeam.team.info.flag}</span>
+              <span>{cardLeaderTeam.team.info.name}</span>
             </button>
           {/if}
         </div>
 
-        <div class="rounded-xl bg-pitch/40 ring-1 ring-white/5 p-4">
-          <div class="text-xs uppercase tracking-wider text-yellow-200/70 font-bold">Golden boot</div>
+        <div class="card-raised p-3.5">
+          <div class="type-kicker text-gold">Golden boot</div>
           {#if boot && boot.owner?.id === employeeId}
-            <div class="text-3xl font-bold tabular-nums mt-1 text-yellow-200">👟</div>
-            <div class="text-xs text-stone-400 mt-1">Currently leading</div>
+            <div class="type-display text-2xl mt-1.5 text-gold">👟</div>
+            <div class="text-xs text-fg-faint mt-1">Currently leading</div>
           {:else}
-            <div class="text-3xl font-bold tabular-nums mt-1">—</div>
+            <div class="type-display text-2xl tnum mt-1.5 text-fg-faint">—</div>
           {/if}
           {#if bootContender}
             {@const t = teamFor(bootContender.team)}
-            <button type="button" class="mt-2 inline-flex items-center gap-1.5 text-sm hover:text-yellow-200 text-left" onclick={() => navigateTeam(bootContender.team)} disabled={!store.espnReachable}>
-              <span>{t.flag}</span>
-              <span class="text-stone-300">{bootContender.player} ({bootContender.goals})</span>
+            <button type="button" class="mt-2 inline-flex items-center gap-1.5 text-sm pressable text-fg-mute hover:text-fg text-left" onclick={() => navigateTeam(bootContender.team)} disabled={!store.espnReachable}>
+              <span aria-hidden="true">{t.flag}</span>
+              <span>{bootContender.player} ({bootContender.goals})</span>
             </button>
           {/if}
         </div>
@@ -212,28 +212,28 @@
     </section>
 
     <!-- Owned teams -->
-    <section class="mb-6">
-      <h3 class="text-sm font-bold uppercase tracking-widest text-emerald-200/80 mb-3">Their six picks</h3>
+    <section class="mb-5">
+      <h3 class="type-kicker text-fg-mute kicker-slash mb-3">Their six picks</h3>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
         {#each ownedTeams as t (t.fifaCode)}
           <button
             type="button"
-            class="rounded-xl bg-pitch/40 ring-1 ring-white/5 p-3 flex items-center gap-3 text-left hover:bg-pitch/60 hover:ring-white/20 disabled:hover:bg-pitch/40 disabled:hover:ring-white/5 disabled:cursor-default transition-colors"
+            class="card-raised lift p-3 flex items-center gap-3 text-left disabled:cursor-default"
             onclick={() => navigateTeam(t.fifaCode)}
             disabled={!store.espnReachable}
           >
-            <span class="text-3xl">{t.info.flag}</span>
+            <span class="text-2xl" aria-hidden="true">{t.info.flag}</span>
             <div class="flex-1 min-w-0">
-              <div class="font-semibold truncate">
+              <div class="font-semibold truncate text-sm">
                 {t.info.name}
-                {#if t.topTier}<span class="text-amber-300 ml-1" title="Top tier">★</span>{/if}
+                {#if t.topTier}<span class="text-gold ml-1" title="Top tier">★</span>{/if}
               </div>
               {#if t.standing}
-                <div class="text-xs text-stone-400 tabular-nums">
-                  Group {t.standing.groupId} &middot; {t.standing.pts} pts &middot; GD {t.standing.gd >= 0 ? '+' : ''}{t.standing.gd}
+                <div class="text-xs text-fg-faint tnum type-cond">
+                  Group {t.standing.groupId} · {t.standing.pts} pts · GD {t.standing.gd >= 0 ? '+' : ''}{t.standing.gd}
                 </div>
               {:else}
-                <div class="text-xs text-stone-500 italic">no group data</div>
+                <div class="text-xs text-fg-faint/70">no group data</div>
               {/if}
             </div>
           </button>
@@ -246,18 +246,18 @@
       <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
         {#if recentFixtures.length}
           <div>
-            <h3 class="text-sm font-bold uppercase tracking-widest text-stone-200/80 mb-3">Recent results</h3>
+            <h3 class="type-kicker text-fg-mute kicker-slash mb-3">Recent results</h3>
             <div class="space-y-2">
               {#each recentFixtures as m (m.id)}
                 {@const ht = teamFor(m.home)}
                 {@const at = teamFor(m.away)}
-                <button type="button" class="w-full text-left rounded-lg bg-pitch/40 ring-1 ring-white/5 px-3 py-2 hover:bg-pitch/60 hover:ring-white/20 disabled:hover:bg-pitch/40 disabled:cursor-default transition-colors flex items-center gap-2 text-sm"
+                <button type="button" class="w-full text-left card-raised lift px-3 py-2 disabled:cursor-default flex items-center gap-2 text-sm"
                   onclick={() => navigateGame(m.id)} disabled={!store.espnReachable}>
-                  <span>{ht.flag}</span>
+                  <span aria-hidden="true">{ht.flag}</span>
                   <span class="font-medium truncate flex-1">{ht.name}</span>
-                  <span class="font-bold tabular-nums">{m.homeGoals}–{m.awayGoals}</span>
+                  <span class="type-display tnum text-base">{m.homeGoals}–{m.awayGoals}</span>
                   <span class="font-medium truncate flex-1 text-right">{at.name}</span>
-                  <span>{at.flag}</span>
+                  <span aria-hidden="true">{at.flag}</span>
                 </button>
               {/each}
             </div>
@@ -266,16 +266,16 @@
 
         {#if upcomingFixtures.length}
           <div>
-            <h3 class="text-sm font-bold uppercase tracking-widest text-emerald-200/80 mb-3">Upcoming</h3>
+            <h3 class="type-kicker text-volt kicker-slash mb-3">Upcoming</h3>
             <div class="space-y-2">
               {#each upcomingFixtures as m (m.id)}
                 {@const ht = TEAMS[m.home] ? teamFor(m.home) : null}
                 {@const at = TEAMS[m.away] ? teamFor(m.away) : null}
-                <button type="button" class="w-full text-left rounded-lg bg-pitch/40 ring-1 ring-white/5 px-3 py-2 hover:bg-pitch/60 hover:ring-white/20 disabled:hover:bg-pitch/40 disabled:cursor-default transition-colors flex items-center gap-2 text-sm"
+                <button type="button" class="w-full text-left card-raised lift px-3 py-2 disabled:cursor-default flex items-center gap-2 text-sm"
                   onclick={() => navigateGame(m.id)} disabled={!store.espnReachable}>
-                  {#if ht}<span>{ht.flag}</span><span class="font-medium truncate flex-1">{ht.name}</span>{:else}<span class="text-stone-500 italic flex-1">{m.home ?? 'TBD'}</span>{/if}
-                  <span class="text-xs text-stone-400 tabular-nums">{formatKickoff(m.utc)}</span>
-                  {#if at}<span class="font-medium truncate flex-1 text-right">{at.name}</span><span>{at.flag}</span>{:else}<span class="text-stone-500 italic flex-1 text-right">{m.away ?? 'TBD'}</span>{/if}
+                  {#if ht}<span aria-hidden="true">{ht.flag}</span><span class="font-medium truncate flex-1">{ht.name}</span>{:else}<span class="text-fg-faint flex-1">{m.home ?? 'TBD'}</span>{/if}
+                  <span class="text-xs text-fg-faint tnum type-cond">{formatKickoff(m.utc)}</span>
+                  {#if at}<span class="font-medium truncate flex-1 text-right">{at.name}</span><span aria-hidden="true">{at.flag}</span>{:else}<span class="text-fg-faint flex-1 text-right">{m.away ?? 'TBD'}</span>{/if}
                 </button>
               {/each}
             </div>
@@ -285,7 +285,7 @@
     {/if}
 
     {#if !store.espnReachable}
-      <p class="mt-6 text-xs text-stone-400 italic text-center">
+      <p class="mt-6 text-xs text-fg-faint text-center">
         Team and game drill-down disabled — ESPN data not available right now.
       </p>
     {/if}

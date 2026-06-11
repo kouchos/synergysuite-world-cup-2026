@@ -31,38 +31,40 @@
   }
 </script>
 
-<div class="rounded-xl bg-pitch-light/40 ring-1 ring-white/10 p-3 flex items-center gap-3">
-  <div class="flex-1 flex flex-col items-end gap-1">
-    <button type="button" class="flex items-center gap-2 group/team hover:underline decoration-1 underline-offset-2 disabled:cursor-default disabled:no-underline" onclick={() => openTeam(match.home)} disabled={!store.espnReachable}>
-      <span class="font-medium">{home.name}</span>
-      <span class="text-2xl">{home.flag}</span>
+<div class="card lift p-2.5 flex items-center gap-2 {match.status === 'live' ? 'border-live/40' : ''}">
+  <div class="flex-1 min-w-0 flex flex-col items-end gap-1">
+    <button type="button" class="flex items-center gap-1.5 min-w-0 pressable disabled:cursor-default" onclick={() => openTeam(match.home)} disabled={!store.espnReachable}>
+      <span class="font-semibold text-[13px] truncate">{home.name}</span>
+      <span class="text-xl leading-none" aria-hidden="true">{home.flag}</span>
     </button>
-    <button type="button" class="hover:opacity-90 disabled:cursor-default" onclick={() => openOwner(homeOwner)} disabled={!homeOwner}>
+    <button type="button" class="pressable disabled:cursor-default" onclick={() => openOwner(homeOwner)} disabled={!homeOwner}>
       <OwnerBadge employee={homeOwner} size="sm" />
     </button>
   </div>
 
-  <button type="button" class="px-3 text-center min-w-[78px] rounded hover:bg-white/5 disabled:hover:bg-transparent disabled:cursor-default" onclick={openGame} disabled={!gameClickable}>
+  <button type="button" class="px-2 py-1 text-center min-w-[72px] rounded-md pressable hover:bg-ink-3 disabled:hover:bg-transparent disabled:cursor-default" onclick={openGame} disabled={!gameClickable}>
     {#if match.status === 'final' || match.status === 'live'}
-      <div class="text-2xl font-bold tabular-nums">
-        {match.homeGoals}<span class="text-stone-400 mx-1">–</span>{match.awayGoals}
-      </div>
+      {#key `${match.homeGoals}-${match.awayGoals}`}
+        <div class="score-pop type-display text-xl tnum">
+          {match.homeGoals}<span class="text-fg-faint mx-0.5 not-italic">–</span>{match.awayGoals}
+        </div>
+      {/key}
       {#if match.status === 'live'}
-        <div class="mt-0.5"><LiveDot label={match.minute ? `${match.minute}'` : 'LIVE'} /></div>
+        <div class="mt-0.5 flex justify-center"><LiveDot label={match.minute ? `${match.minute}'` : 'LIVE'} /></div>
       {:else}
-        <div class="text-xs text-stone-400 mt-0.5">FT</div>
+        <div class="type-kicker text-fg-faint mt-1">FT</div>
       {/if}
     {:else}
-      <div class="text-xs text-stone-300">{formatKickoff(match.utc)}</div>
+      <div class="text-[11px] type-cond text-fg-mute leading-tight">{formatKickoff(match.utc)}</div>
     {/if}
   </button>
 
-  <div class="flex-1 flex flex-col items-start gap-1">
-    <button type="button" class="flex items-center gap-2 group/team hover:underline decoration-1 underline-offset-2 disabled:cursor-default disabled:no-underline" onclick={() => openTeam(match.away)} disabled={!store.espnReachable}>
-      <span class="text-2xl">{away.flag}</span>
-      <span class="font-medium">{away.name}</span>
+  <div class="flex-1 min-w-0 flex flex-col items-start gap-1">
+    <button type="button" class="flex items-center gap-1.5 min-w-0 pressable disabled:cursor-default" onclick={() => openTeam(match.away)} disabled={!store.espnReachable}>
+      <span class="text-xl leading-none" aria-hidden="true">{away.flag}</span>
+      <span class="font-semibold text-[13px] truncate">{away.name}</span>
     </button>
-    <button type="button" class="hover:opacity-90 disabled:cursor-default" onclick={() => openOwner(awayOwner)} disabled={!awayOwner}>
+    <button type="button" class="pressable disabled:cursor-default" onclick={() => openOwner(awayOwner)} disabled={!awayOwner}>
       <OwnerBadge employee={awayOwner} size="sm" />
     </button>
   </div>

@@ -37,12 +37,12 @@ test.describe('Mid-tournament mock (?mock=1)', () => {
 
   test('Pool stage tab is auto-selected with the AUTO badge', async ({ page }) => {
     const tab = page.getByRole('button', { name: /Pool stage/ });
-    await expect(tab).toHaveClass(/bg-emerald-400/);
+    await expect(tab).toHaveClass(/bg-volt/);
     await expect(tab).toContainText(/auto/i);
   });
 
   test('Group A standings show the expected mock teams', async ({ page }) => {
-    const groupA = page.locator('text=Group A').locator('xpath=ancestor::div[contains(@class, "rounded-xl")]').first();
+    const groupA = page.locator('[data-group="A"]');
     await expect(groupA).toContainText('Mexico');
     await expect(groupA).toContainText('Canada');
     await expect(groupA).toContainText('DR Congo');
@@ -68,7 +68,7 @@ test.describe('Mid-tournament mock (?mock=1)', () => {
     await expect(page.getByRole('heading', { name: 'Final', exact: true })).toBeVisible();
     // Spain–Argentina is the live R16 match — pick the one cell that
     // contains both team codes and has the rose live-ring.
-    const liveCell = page.locator('.bracket-cell.ring-rose-500\\/70');
+    const liveCell = page.locator('.bracket-cell[data-live]');
     await expect(liveCell).toHaveCount(1);
     await expect(liveCell).toContainText('ESP');
     await expect(liveCell).toContainText('ARG');
@@ -107,7 +107,7 @@ test.describe('Post-final mock (?mock=final)', () => {
 
   test('Winners tab is auto-selected with phase=winners', async ({ page }) => {
     const tab = page.getByRole('button', { name: /Winners/ });
-    await expect(tab).toHaveClass(/bg-emerald-400/);
+    await expect(tab).toHaveClass(/bg-volt/);
     await expect(tab).toContainText(/auto/i);
   });
 

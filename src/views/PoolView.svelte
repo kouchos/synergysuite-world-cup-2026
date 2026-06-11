@@ -21,20 +21,13 @@
   );
 </script>
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4">
-  <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-    {#each groups as g (g.id)}
-      <GroupTable group={g} {employees} />
-    {/each}
-    {#if groups.length === 0}
-      <div class="text-stone-300/70 italic">Waiting for group data…</div>
-    {/if}
-  </div>
-
-  <aside class="space-y-4">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-3 px-3 sm:px-5 py-3">
+  <!-- Matchday rail leads on mobile (the live stuff matters most on a phone),
+       sits right of the groups on desktop. -->
+  <aside class="space-y-4 order-first lg:order-last">
     {#if live.length}
-      <section>
-        <h2 class="text-sm font-bold uppercase tracking-widest text-rose-200/80 mb-2">Live now</h2>
+      <section class="rise-in">
+        <h2 class="type-kicker text-live kicker-slash mb-2">Live now</h2>
         <div class="space-y-2">
           {#each live as m (m.id)}
             <MatchCard match={m} {employees} />
@@ -44,8 +37,8 @@
     {/if}
 
     {#if upcoming.length}
-      <section>
-        <h2 class="text-sm font-bold uppercase tracking-widest text-emerald-200/80 mb-2">Upcoming</h2>
+      <section class="rise-in" style:--stagger="60ms">
+        <h2 class="type-kicker text-volt kicker-slash mb-2">Upcoming</h2>
         <div class="space-y-2">
           {#each upcoming as m (m.id)}
             <MatchCard match={m} {employees} />
@@ -55,8 +48,8 @@
     {/if}
 
     {#if recent.length}
-      <section>
-        <h2 class="text-sm font-bold uppercase tracking-widest text-stone-200/80 mb-2">Recent results</h2>
+      <section class="rise-in" style:--stagger="120ms">
+        <h2 class="type-kicker text-fg-mute kicker-slash mb-2">Recent results</h2>
         <div class="space-y-2">
           {#each recent as m (m.id)}
             <MatchCard match={m} {employees} />
@@ -65,4 +58,15 @@
       </section>
     {/if}
   </aside>
+
+  <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5 content-start">
+    {#each groups as g, i (g.id)}
+      <div class="rise-in" style:--stagger={`${Math.min(i * 35, 280)}ms`}>
+        <GroupTable group={g} {employees} />
+      </div>
+    {/each}
+    {#if groups.length === 0}
+      <div class="card p-6 text-fg-mute text-sm col-span-full text-center">Waiting for group data…</div>
+    {/if}
+  </div>
 </div>

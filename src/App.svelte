@@ -3,6 +3,7 @@
   import { fade } from 'svelte/transition';
   import { store } from './lib/state/store.svelte.js';
   import { modal } from './lib/state/modal.svelte.js';
+  import { dur } from './lib/motion.js';
   import Header from './components/Header.svelte';
   import ViewTabs from './components/ViewTabs.svelte';
   import Countdown from './components/Countdown.svelte';
@@ -47,21 +48,32 @@
 </script>
 
 <div class="min-h-screen flex flex-col">
+  <!-- Brand bar -->
+  <div class="px-3 sm:px-5 pt-3 flex items-center gap-2.5">
+    <span class="bg-volt text-ink type-display text-sm px-2 py-1 rounded-[4px] -skew-x-12 inline-block" aria-hidden="true">
+      <span class="inline-block skew-x-12">WC26</span>
+    </span>
+    <div class="leading-none">
+      <div class="type-display text-[15px] leading-none">SynergySuite Sweepstake</div>
+      <div class="type-kicker text-fg-faint mt-1">FIFA World Cup 2026 · 11 Jun – 19 Jul</div>
+    </div>
+  </div>
+
   <Header state={store.state} employees={store.employees} />
   <ViewTabs value={store.view} phase={store.phase} onSelect={selectView} />
   <Countdown snapshot={store.state} />
 
   <main class="flex-1">
     {#if store.view === 'group'}
-      <div in:fade={{ duration: 180 }}>
+      <div in:fade={{ duration: dur(180) }}>
         <PoolView state={store.state} employees={store.employees} />
       </div>
     {:else if store.view === 'knockout'}
-      <div in:fade={{ duration: 180 }}>
+      <div in:fade={{ duration: dur(180) }}>
         <KnockoutView state={store.state} employees={store.employees} />
       </div>
     {:else}
-      <div in:fade={{ duration: 180 }}>
+      <div in:fade={{ duration: dur(180) }}>
         <WinnersView state={store.state} employees={store.employees} />
       </div>
     {/if}
@@ -75,19 +87,19 @@
     <GameModal matchId={modal.current.params.matchId} />
   {/if}
 
-  <footer class="px-4 py-3 text-xs text-stone-400/70 flex items-center justify-between gap-4">
+  <footer class="mt-2 px-3 sm:px-5 py-3 border-t border-line/60 text-[11px] type-cond text-fg-faint flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
     <span>SynergySuite World Cup 2026 sweepstake</span>
     <div class="flex items-center gap-3">
       {#if store.syncing}
-        <span class="inline-flex items-center gap-1.5 text-emerald-300">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 live-dot"></span>
+        <span class="inline-flex items-center gap-1.5 text-volt">
+          <span class="w-1.5 h-1.5 rounded-full bg-volt live-dot"></span>
           syncing…
         </span>
       {/if}
       {#if store.lastError}
-        <span class="text-rose-300/80" title={String(store.lastError)}>· using cached data</span>
+        <span class="text-live/90" title={String(store.lastError)}>· using cached data</span>
       {/if}
-      <span>{sourceLabel} · {syncLabel}</span>
+      <span class="tnum">{sourceLabel} · {syncLabel}</span>
     </div>
   </footer>
 </div>

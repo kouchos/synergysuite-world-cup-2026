@@ -1,10 +1,38 @@
 @import "tailwindcss";
+@import "@fontsource-variable/archivo/wdth.css";
+@import "@fontsource-variable/archivo/wdth-italic.css";
+
+/* ────────────────────────────────────────────────────────────────────────────
+   FLOODLIGHT design system — night-broadcast look for the WC26 sweepstake.
+   Ink (blue-black) elevation ramp · volt accent · signal red for live ·
+   gold for trophies. One variable font (Archivo wdth+wght) does all voices:
+   expanded-black-italic for display, semi-condensed caps for labels.
+   ──────────────────────────────────────────────────────────────────────── */
 
 @theme {
-  --color-pitch: #0a3b2e;
-  --color-pitch-dark: #062821;
-  --color-pitch-light: #14543f;
-  --color-chalk: #f5f5f4;
+  /* Ink elevation ramp */
+  --color-ink: #0a0c10;
+  --color-ink-2: #10141b;
+  --color-ink-3: #161c25;
+  --color-ink-4: #1e2630;
+
+  /* Brand accent */
+  --color-volt: #c8f542;
+  --color-volt-dim: #9fc52f;
+
+  /* Signals */
+  --color-live: #ff4d5d;
+  --color-gold: #f2c14e;
+
+  /* Text */
+  --color-fg: #f2f4f8;
+  --color-fg-mute: #aab3c2;
+  --color-fg-faint: #717c8e;
+
+  /* Hairlines */
+  --color-line: #28303c;
+
+  --font-sans: "Archivo Variable", system-ui, sans-serif;
 }
 
 html, body, #app {
@@ -12,19 +40,148 @@ html, body, #app {
 }
 
 body {
-  font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  background: linear-gradient(180deg, #062821 0%, #0a3b2e 100%);
+  font-family: var(--font-sans);
+  font-stretch: 100%;
+  background-color: var(--color-ink);
+  /* Floodlight glow from the top + faint pitch hash texture */
+  background-image:
+    radial-gradient(120% 60% at 50% -12%, rgba(200, 245, 66, 0.085), transparent 60%),
+    radial-gradient(80% 40% at 85% -5%, rgba(77, 148, 255, 0.05), transparent 55%),
+    repeating-linear-gradient(0deg, transparent 0 71px, rgba(255, 255, 255, 0.018) 71px 72px);
   background-attachment: fixed;
-  color: #f5f5f4;
+  color: var(--color-fg);
   margin: 0;
   -webkit-font-smoothing: antialiased;
 }
 
-@keyframes live-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(1.15); }
+/* ── Type voices ──────────────────────────────────────────────────────────── */
+
+/* Broadcast display: expanded, black, italic, uppercase. For scores, names,
+   countdown digits — anything that should feel like an on-screen graphic. */
+@utility type-display {
+  font-stretch: 123%;
+  font-weight: 800;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
 }
 
-.live-dot {
-  animation: live-pulse 1.4s ease-in-out infinite;
+/* Kicker / section label: semi-condensed caps. */
+@utility type-kicker {
+  font-stretch: 80%;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.6875rem; /* 11px */
+  line-height: 1;
+}
+
+/* Condensed data text (table headers, codes) */
+@utility type-cond {
+  font-stretch: 80%;
+  font-variant-numeric: tabular-nums;
+}
+
+@utility tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Surfaces ─────────────────────────────────────────────────────────────── */
+
+@utility card {
+  background-color: var(--color-ink-2);
+  border: 1px solid var(--color-line);
+  border-radius: 0.625rem;
+}
+
+@utility card-raised {
+  background-color: var(--color-ink-3);
+  border: 1px solid var(--color-line);
+  border-radius: 0.625rem;
+}
+
+/* Broadcast lower-third corner cut, the signature shape for hero panels. */
+@utility clip-corner {
+  clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%);
+}
+
+/* Volt slash that prefixes kickers — a tiny parallelogram, pure CSS. */
+.kicker-slash::before {
+  content: '';
+  display: inline-block;
+  width: 0.5em;
+  height: 0.72em;
+  margin-right: 0.55em;
+  background: var(--color-volt);
+  transform: skewX(-18deg);
+  vertical-align: -0.02em;
+}
+
+/* ── Interactive feel ─────────────────────────────────────────────────────── */
+
+:focus-visible {
+  outline: 2px solid var(--color-volt);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@utility pressable {
+  transition: transform 120ms ease, background-color 120ms ease,
+    border-color 120ms ease, filter 120ms ease;
+  &:hover { filter: brightness(1.12); }
+  &:active { transform: scale(0.985); }
+}
+
+@utility lift {
+  transition: transform 150ms ease, border-color 150ms ease,
+    background-color 150ms ease;
+  &:hover {
+    transform: translateY(-1px);
+    border-color: var(--color-ink-4);
+    background-color: var(--color-ink-3);
+  }
+}
+
+/* ── Motion ───────────────────────────────────────────────────────────────── */
+
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(1.25); }
+}
+.live-dot { animation: live-pulse 1.4s ease-in-out infinite; }
+
+/* Score / value change pop — applied via {#key} so it replays per change. */
+@keyframes score-pop {
+  0% { transform: scale(1.35); color: var(--color-volt); }
+  100% { transform: scale(1); }
+}
+.score-pop {
+  display: inline-block;
+  animation: score-pop 500ms cubic-bezier(0.22, 1.4, 0.36, 1);
+}
+
+/* Staggered card entrance for view switches. */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.rise-in {
+  animation: rise-in 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--stagger, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Scrollbars on the dark theme ─────────────────────────────────────────── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-ink-4) transparent;
 }
