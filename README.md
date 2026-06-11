@@ -16,6 +16,7 @@ A persistent header keeps the four current leaders visible at all times. Three v
 ## Tech
 
 - Svelte 5 + Vite + Tailwind CSS 4 → small static bundle that deploys cleanly to GitHub Pages
+- Archivo variable font self-hosted via Fontsource (bundled at build time — no external font CDN); design system documented in `REDESIGN_NOTES.md`
 - Data: ESPN's public scoreboard / summary / standings endpoints (no key required) primary; openfootball/worldcup.json baseline fixtures; API-Football Pro documented as paid fallback if ESPN's unofficial schema ever breaks
 - A `MOCK_DATA` fixture lets the UI run offline before/between matches
 
@@ -140,7 +141,7 @@ the schedule skeleton.
 
 ### Capturing screenshots
 
-`screenshots/` holds reference captures of each view at TV (1920×1080) and laptop (1366×768) sizes. To regenerate them:
+`screenshots/` holds reference captures of each view at TV (1920×1080) and laptop (1366×768) sizes; `screenshots/baseline/` and `screenshots/redesign/` hold the before/after sets from the 2026 visual redesign at mobile/tablet/desktop widths (see `REDESIGN_NOTES.md` for the design rationale; regenerate with `node scripts/baseline-screenshots.mjs` / `node scripts/redesign-screenshots.mjs`). To regenerate the TV captures:
 
 ```bash
 npx playwright install chromium   # one-off

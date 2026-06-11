@@ -259,6 +259,108 @@ deps beyond what exists).
 
 ---
 
+## Phase 3 — Build notes
+
+Built on branch `fable-redesign`, iterating with
+`scripts/redesign-screenshots.mjs` (screenshot → critique → refine; three
+full cycles across all views/breakpoints). Fixes made *because* of the
+visual loop: mobile prize tiles truncated "Curaçao"/"Lautaro Martínez"
+(now wrap); GD/Pts table headers collided (spacing fixed); champion name
+overflowed at 375px (clamp() sizing); golden-boot tile sat half-width
+next to dead space on mobile (now spans); game modal hit ESPN with mock
+match ids and spammed the console (now only fetches numeric ESPN ids).
+
+Performance/deploy facts: no new runtime dependencies; fonts self-hosted
+via `@fontsource-variable/archivo` and bundled by Vite (~190 KB of latin
+woff2 for a typical visitor, `font-display: swap`); CSS 7.9 KB gzipped,
+JS 49 KB gzipped; output is still a fully static `dist/` — the GitHub
+Pages workflow needs zero changes.
+
 ## Phase 4 — Verification
 
-*(completed at the end of the build — see checklist below)*
+`npm test` (smoke + modals + network): **36 passed, 3 skipped** — the
+skips are the ESPN-specific network tests, which auto-skip because ESPN
+is unreachable from this sandbox (the UI's fallback path renders and is
+itself asserted). Four test assertions were updated where they were
+coupled to old implementation classes (`bg-emerald-400` → `bg-volt`,
+`rounded-xl` ancestor → `[data-group]`, live-ring class → `[data-live]`,
+"First match:" colon); all behavioural assertions unchanged.
+
+Console: clean in mock modes at all three breakpoints (asserted by
+`scripts/redesign-screenshots.mjs`, which fails on any console error).
+The live-mode capture in this network-restricted sandbox logs browser
+CORS messages for ESPN — environmental, caught by the data layer, and
+the footer correctly reports "ESPN unreachable".
+
+Inventory walkthrough (every Phase 1 item, confirmed rendered/working —
+see `screenshots/redesign/` for evidence):
+
+- [x] 4 prize tiles with all stats (leaders, pts, GD, Y/R counts,
+      weighted pts, goals, owner names/colours) — smoke test +
+      `group-*.png`
+- [x] Pre-tournament hero: logo (+⚽ fallback path kept), kicker, kickoff
+      headline, first fixture w/ flags + time-until, "tiles will
+      populate" note — `live-*.png` (real openfootball data)
+- [x] View tabs with active state, AUTO badge, manual override — smoke
+- [x] Live banner (flags, names, score, minute, pulse) and next-match
+      countdown (1s tick) — smoke + `group-*.png`
+- [x] Group tables: owner stripes (clickable), flags, names, top-tier ★,
+      P/W/D/L/GD/Pts, row → team modal, "Waiting for group data…" empty
+      state preserved — smoke + modals tests
+- [x] Matchday rail: Live now / Upcoming (8) / Recent results (8), match
+      cards with owners, score/FT/LIVE/kickoff centre → game modal —
+      modals tests
+- [x] Bracket: R32→Final columns + Third place, connectors, TBD slots,
+      winner emphasis (now volt highlight), live ring + minute,
+      scheduled kickoff times, all three click-throughs, empty-state
+      copy preserved — smoke + `knockout-*.png`
+- [x] Winners: pre-final placeholder; champion hero (team, owner, beaten
+      opponent + owner + score); worst/cards/boot prize cards with full
+      stats — smoke + `winners-*.png`
+- [x] Employee modal: hero w/ rank, 4 prize-position cards, six picks
+      (group/pts/GD, "no group data" fallback), recent/upcoming
+      fixtures, ESPN-unreachable note — modals tests +
+      `modal-employee-*.png`
+- [x] Team modal: hero (flag, top-tier label, owner badge, ESPN crest),
+      Overview/Squad/Schedule/Group tabs with all loading/no-data
+      fallbacks — modals tests + `modal-team-*.png`
+- [x] Game modal: live/report/preview variants, score hero, owners,
+      venue, broadcasts, key-events timeline (cards now crisp CSS
+      rectangles with aria-labels instead of emoji), ESPN stats/lineups/
+      notes, loading/error/no-id fallbacks — modals tests +
+      `modal-game-*.png`
+- [x] Modal shell: accent colour per context, ESC/backdrop close, scroll
+      lock, focus-visible rings — modals tests
+- [x] Footer: app name, syncing pulse, "using cached data" error state,
+      full source-label matrix, synced time (Europe/Dublin) — smoke +
+      network tests (incl. "ESPN unreachable" live in the sandbox)
+- [x] Data layer untouched: adaptive refresh, SWR cache, diagnostics,
+      `?mock=1` / `?mock=final` / `?nocache=1`, ESPN-gated drill-downs
+- [x] Accessibility: semantic headings/tables kept, keyboard path added
+      to group-table team names, focus-visible volt rings, AA text
+      colours on all surfaces, `prefers-reduced-motion` disables both
+      CSS animations and Svelte JS transitions, decorative flags/colour
+      bars aria-hidden with text alternatives present
+- [x] Static deploy unchanged: `npm run build` → static dist; Pages
+      workflow untouched
+
+States exercised with Playwright and captured: mid-tournament
+(`group/knockout/winners-pending`), live in-play match (mock live
+fixture + bracket live cell), completed tournament
+(`winners-final/knockout-final`), pre-tournament + degraded-network live
+mode (`live-*`), all three modals. Not simulatable without stubbing the
+data layer: the "Waiting for group data…" / empty-bracket states (live
+mode always has the openfootball baseline; code paths preserved
+verbatim from the original).
+
+### Recommended follow-ups
+
+- A tiny owner legend (8 colours → names) somewhere discoverable for new
+  joiners; the race strip partially covers this.
+- The race strip ranks by overall points only — could rotate through the
+  four prize races on the office TV.
+- Consider SVG flag assets (e.g. flag-icons) if emoji-flag rendering on
+  Windows/ChromeOS office machines proves ugly; kept emoji to stay
+  zero-asset like the original.
+- If ESPN's CORS ever loosens for the summary endpoint, surface goal
+  scorers inline on match cards (data already flows through events).

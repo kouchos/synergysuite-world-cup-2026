@@ -29,6 +29,8 @@ const captures = [
   { url: '/?mock=1', prefix: 'modal-game', action: async (page) => {
     await page.locator('aside').getByRole('button', { name: /3.*1/ }).first().click();
   } },
+  // Live mode — real openfootball/ESPN data (graceful fallback if offline).
+  { url: '/?nocache=1', prefix: 'live', wait: 4000 },
 ];
 
 await mkdir(OUT, { recursive: true });
@@ -50,6 +52,7 @@ for (const vp of viewports) {
   for (const cap of captures) {
     try {
       await page.goto(BASE + cap.url, { waitUntil: 'networkidle' });
+      if (cap.wait) await page.waitForTimeout(cap.wait);
       if (cap.tab) {
         await page.getByRole('button', { name: cap.tab }).click();
         await page.waitForTimeout(450);

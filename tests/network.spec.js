@@ -50,7 +50,7 @@ test.describe('Live data — openfootball baseline', () => {
     test.skip(!openfootballReachable, 'openfootball not reachable');
     // Today is well before 11 Jun 2026 — the hero should show.
     await expect(page.getByText(/Kicks off/i)).toBeVisible({ timeout: 8000 });
-    await expect(page.getByText(/First match:/i)).toBeVisible();
+    await expect(page.getByText(/First match/i).first()).toBeVisible();
   });
 
   test('all 12 real World Cup groups appear in the Pool view', async ({ page }) => {
