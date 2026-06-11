@@ -63,6 +63,18 @@
   const venue = $derived(match?.venue ?? summary?.gameInfo?.venue?.fullName ?? null);
   const broadcasts = $derived(summary?.header?.competitions?.[0]?.broadcasts ?? []);
 
+  // ESPN broadcast entries vary: `names` (array of channel strings) in some
+  // payloads, `media.shortName` in others; `market` is an object, never a
+  // display string — rendering it directly gives "[object Object]".
+  const broadcastNames = $derived.by(() => {
+    const out = [];
+    for (const b of broadcasts) {
+      if (Array.isArray(b?.names)) out.push(...b.names.filter((n) => typeof n === 'string'));
+      else if (typeof b?.media?.shortName === 'string') out.push(b.media.shortName);
+    }
+    return [...new Set(out)];
+  });
+
   // Header.competitions[0].competitors for ESPN-side score detail
   const espnComp = $derived(summary?.header?.competitions?.[0]);
   const espnHome = $derived(espnComp?.competitors?.find((c) => c.homeAway === 'home'));
@@ -188,9 +200,9 @@
       {#if venue}
         <div class="mt-4 text-center text-xs text-fg-faint type-cond">📍 {venue}</div>
       {/if}
-      {#if broadcasts.length > 0}
+      {#if broadcastNames.length > 0}
         <div class="mt-1 text-center text-xs text-fg-faint type-cond">
-          📺 {broadcasts.flatMap((b) => b.names ?? b.market ? [b.market] : []).join(' · ') || broadcasts.map((b) => b.media?.shortName).filter(Boolean).join(' · ')}
+          📺 {broadcastNames.join(' · ')}
         </div>
       {/if}
     </section>
