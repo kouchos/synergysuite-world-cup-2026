@@ -60,6 +60,39 @@
   // Sort match events chronologically
   const matchEvents = $derived([...(match?.events ?? [])].sort((a, b) => (a.minute ?? 0) - (b.minute ?? 0)));
 
+  // ESPN's summary carries a play-by-play `commentary` array for most WC
+  // matches (sometimes nested under gamepackageJSON). Normalise defensively:
+  // entries expose text either at the top level or under play.text, and the
+  // clock under time/play.clock. Tag goals and cards so the feed can flag them.
+  function commentaryKind(c) {
+    const type = c?.play?.type?.text ?? '';
+    const text = c?.text ?? c?.play?.text ?? '';
+    if (/^goal$|penalty.+scored/i.test(type) || /^goal!/i.test(text)) return 'goal';
+    if (/yellow card/i.test(type)) return 'yellow';
+    if (/red card/i.test(type)) return 'red';
+    return null;
+  }
+  const commentary = $derived.by(() => {
+    const raw = summary?.commentary ?? summary?.gamepackageJSON?.commentary ?? [];
+    return raw
+      .map((c, i) => ({
+        sequence: Number(c?.sequence ?? c?.play?.sequenceNumber ?? i),
+        clock: c?.time?.displayValue ?? c?.play?.clock?.displayValue ?? '',
+        text: (typeof c?.text === 'string' && c.text) || c?.play?.text || '',
+        kind: commentaryKind(c),
+      }))
+      .filter((c) => c.text)
+      .sort((a, b) => b.sequence - a.sequence) // newest first, live-feed style
+      .slice(0, 300);
+  });
+
+  let activeTab = $state('events');
+  const tabs = [
+    { id: 'events', label: 'Key events' },
+    { id: 'commentary', label: 'Commentary' },
+    { id: 'sheets', label: 'Team sheets' },
+  ];
+
   const venue = $derived(match?.venue ?? summary?.gameInfo?.venue?.fullName ?? null);
   const broadcasts = $derived(summary?.header?.competitions?.[0]?.broadcasts ?? []);
 
@@ -163,9 +196,11 @@
               </div>
             {/key}
             {#if isLive}
-              <div class="mt-2 inline-flex items-center gap-1.5 text-live type-kicker">
-                <span class="w-1.5 h-1.5 rounded-full bg-live live-dot"></span>
-                Live · {match.minute}'
+              <div class="mt-2">
+                <span class="inline-flex items-center gap-1.5 text-live type-kicker">
+                  <span class="w-1.5 h-1.5 rounded-full bg-live live-dot"></span>
+                  Live · {match.minute}'
+                </span>
               </div>
             {:else}
               <div class="mt-2 type-kicker text-fg-faint">Full time</div>
@@ -207,54 +242,124 @@
       {/if}
     </section>
 
-    <!-- Events timeline (goals + cards) -->
-    {#if matchEvents.length > 0}
-      <section class="mb-5">
-        <h3 class="type-kicker text-fg-mute kicker-slash mb-3">Key events</h3>
-        <div class="space-y-1.5">
-          {#each matchEvents as ev (`${ev.minute}-${ev.player}-${ev.type}`)}
-            {@const onHome = ev.team === match.home}
-            <div class="flex items-center gap-3 text-sm">
-              <span class="w-10 text-right text-fg-faint tnum type-display text-xs">{ev.minute}'</span>
-              <span class="w-7 flex justify-center">
-                {#if ev.type === 'goal'}<span aria-label="Goal">⚽</span>
-                {:else if ev.type === 'yellow'}<span class="inline-block w-2.5 h-3.5 rounded-[2px] bg-[#fbbf24]" role="img" aria-label="Yellow card"></span>
-                {:else if ev.type === 'red'}<span class="inline-block w-2.5 h-3.5 rounded-[2px] bg-[#ef4444]" role="img" aria-label="Red card"></span>
-                {/if}
-              </span>
-              <span class="flex-1 {onHome ? 'text-left' : 'text-right'}">
-                <span class="font-semibold">{ev.player}</span>
-                <span class="text-fg-faint ml-2">({TEAMS[ev.team]?.name ?? ev.team})</span>
-              </span>
-            </div>
-          {/each}
-        </div>
-      </section>
-    {/if}
+    <!-- Tab strip: key events · commentary · team sheets -->
+    <nav class="flex gap-1 mb-4 border-b border-line overflow-x-auto">
+      {#each tabs as t (t.id)}
+        <button
+          type="button"
+          onclick={() => (activeTab = t.id)}
+          class="px-3.5 py-2 type-display text-[13px] border-b-2 transition-colors whitespace-nowrap inline-flex items-center gap-1.5
+            {activeTab === t.id ? 'border-volt text-volt' : 'border-transparent text-fg-faint hover:text-fg-mute'}"
+        >
+          {t.label}
+          {#if t.id === 'commentary' && isLive && commentary.length}
+            <span class="live-dot inline-block w-1.5 h-1.5 rounded-full bg-live" aria-label="Live commentary running"></span>
+          {/if}
+        </button>
+      {/each}
+    </nav>
 
-    <!-- ESPN-fetched extras -->
-    {#if summaryLoading}
-      <div class="text-center text-fg-faint text-sm py-4">Loading match details…</div>
-    {:else if summary}
-      {#if espnHome?.statistics?.length || espnAway?.statistics?.length}
+    {#if activeTab === 'events'}
+      {#if matchEvents.length > 0}
         <section class="mb-5">
-          <h3 class="type-kicker text-fg-mute kicker-slash mb-3">Team stats</h3>
-          <div class="card-raised overflow-hidden">
-            {#each (espnHome?.statistics ?? []) as stat, i}
-              {@const awayStat = espnAway?.statistics?.[i]}
-              <div class="grid grid-cols-3 items-center px-4 py-1.5 text-sm border-b border-line/60 last:border-0">
-                <span class="text-right tnum font-semibold">{stat.displayValue}</span>
-                <span class="text-center type-kicker text-fg-faint">{stat.label ?? stat.name}</span>
-                <span class="text-left tnum font-semibold">{awayStat?.displayValue ?? '—'}</span>
+          <h3 class="type-kicker text-fg-mute kicker-slash mb-3">Key events</h3>
+          <div class="space-y-1.5">
+            {#each matchEvents as ev (`${ev.minute}-${ev.player}-${ev.type}`)}
+              {@const onHome = ev.team === match.home}
+              <div class="flex items-center gap-3 text-sm">
+                <span class="w-10 text-right text-fg-faint tnum type-display text-xs">{ev.minute}'</span>
+                <span class="w-7 flex justify-center">
+                  {#if ev.type === 'goal'}<span aria-label="Goal">⚽</span>
+                  {:else if ev.type === 'yellow'}<span class="inline-block w-2.5 h-3.5 rounded-[2px] bg-[#fbbf24]" role="img" aria-label="Yellow card"></span>
+                  {:else if ev.type === 'red'}<span class="inline-block w-2.5 h-3.5 rounded-[2px] bg-[#ef4444]" role="img" aria-label="Red card"></span>
+                  {/if}
+                </span>
+                <span class="flex-1 {onHome ? 'text-left' : 'text-right'}">
+                  <span class="font-semibold">{ev.player}</span>
+                  <span class="text-fg-faint ml-2">({TEAMS[ev.team]?.name ?? ev.team})</span>
+                </span>
               </div>
             {/each}
           </div>
         </section>
+      {:else if !summaryLoading}
+        <p class="text-center text-fg-faint text-sm py-4">
+          {isScheduled
+            ? 'Key events will appear here once the match kicks off.'
+            : isLive
+              ? 'No key events yet — goals and cards land here as they happen.'
+              : 'No key events recorded for this match.'}
+        </p>
       {/if}
 
-      {#if hasLineups}
-        <section class="mb-5">
-          <h3 class="type-kicker text-fg-mute kicker-slash mb-3">Lineups</h3>
+      {#if summaryLoading && !summary}
+        <div class="text-center text-fg-faint text-sm py-4">Loading match details…</div>
+      {:else if summary}
+        {#if espnHome?.statistics?.length || espnAway?.statistics?.length}
+          <section class="mb-5">
+            <h3 class="type-kicker text-fg-mute kicker-slash mb-3">Team stats</h3>
+            <div class="card-raised overflow-hidden">
+              {#each (espnHome?.statistics ?? []) as stat, i}
+                {@const awayStat = espnAway?.statistics?.[i]}
+                <div class="grid grid-cols-3 items-center px-4 py-1.5 text-sm border-b border-line/60 last:border-0">
+                  <span class="text-right tnum font-semibold">{stat.displayValue}</span>
+                  <span class="text-center type-kicker text-fg-faint">{stat.label ?? stat.name}</span>
+                  <span class="text-left tnum font-semibold">{awayStat?.displayValue ?? '—'}</span>
+                </div>
+              {/each}
+            </div>
+          </section>
+        {/if}
+
+        {#if summary?.article?.headline || summary?.notes?.length}
+          <section>
+            <h3 class="type-kicker text-fg-mute kicker-slash mb-3">Notes</h3>
+            {#if summary?.article?.headline}
+              <p class="text-fg mb-2 font-semibold">{summary.article.headline}</p>
+            {/if}
+            {#if summary?.article?.description}
+              <p class="text-fg-mute text-sm">{summary.article.description}</p>
+            {/if}
+          </section>
+        {/if}
+      {:else if !fetchable}
+        <p class="text-center text-fg-faint text-sm py-4">No ESPN match id available for this fixture.</p>
+      {:else if summaryError}
+        <p class="text-center text-live/80 text-sm py-4">Couldn't load full match details from ESPN.</p>
+      {/if}
+    {:else if activeTab === 'commentary'}
+      {#if summaryLoading && !summary}
+        <p class="text-center text-fg-faint text-sm py-6">Loading commentary…</p>
+      {:else if commentary.length > 0}
+        <section aria-live={isLive ? 'polite' : undefined}>
+          <h3 class="type-kicker text-fg-mute kicker-slash mb-3">
+            {isLive ? 'Live commentary' : 'Commentary'}
+            <span class="text-fg-faint font-normal normal-case tracking-normal ml-1">— newest first</span>
+          </h3>
+          <div class="space-y-1">
+            {#each commentary as c (c.sequence)}
+              <div class="flex gap-3 px-3 py-2 rounded-md text-sm leading-snug
+                {c.kind === 'goal' ? 'bg-volt/10 border-l-2 border-volt' :
+                 c.kind === 'red' ? 'bg-live/10 border-l-2 border-live' :
+                 c.kind === 'yellow' ? 'bg-gold/10 border-l-2 border-gold' : 'odd:bg-ink-3/50'}">
+                <span class="w-11 shrink-0 text-right text-fg-faint tnum type-display text-xs pt-0.5">{c.clock}</span>
+                <span class="{c.kind === 'goal' ? 'text-fg font-semibold' : 'text-fg-mute'}">{c.text}</span>
+              </div>
+            {/each}
+          </div>
+        </section>
+      {:else}
+        <p class="text-center text-fg-faint text-sm py-6">
+          {isScheduled
+            ? 'Commentary starts when the match kicks off.'
+            : 'No commentary feed available for this match.'}
+        </p>
+      {/if}
+    {:else}
+      {#if summaryLoading && !summary}
+        <p class="text-center text-fg-faint text-sm py-6">Loading team sheets…</p>
+      {:else if hasLineups}
+        <section>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <!-- Home side -->
             <div>
@@ -301,23 +406,13 @@
             </div>
           </div>
         </section>
+      {:else}
+        <p class="text-center text-fg-faint text-sm py-6">
+          {isScheduled
+            ? 'Team sheets are published roughly an hour before kickoff.'
+            : 'No team sheets available for this match.'}
+        </p>
       {/if}
-
-      {#if summary?.article?.headline || summary?.notes?.length}
-        <section>
-          <h3 class="type-kicker text-fg-mute kicker-slash mb-3">Notes</h3>
-          {#if summary?.article?.headline}
-            <p class="text-fg mb-2 font-semibold">{summary.article.headline}</p>
-          {/if}
-          {#if summary?.article?.description}
-            <p class="text-fg-mute text-sm">{summary.article.description}</p>
-          {/if}
-        </section>
-      {/if}
-    {:else if !fetchable}
-      <p class="text-center text-fg-faint text-sm py-4">No ESPN match id available for this fixture.</p>
-    {:else if summaryError}
-      <p class="text-center text-live/80 text-sm py-4">Couldn't load full match details from ESPN.</p>
     {/if}
   </Modal>
 {/if}

@@ -121,9 +121,28 @@ test.describe('Game modal', () => {
   test('game modal renders key events for live matches', async ({ page }) => {
     const liveCard = page.locator('aside').locator('section', { hasText: 'Live now' });
     await liveCard.getByRole('button', { name: /3.+1/ }).click();
-    await expect(page.getByRole('dialog').getByText(/Key events/i)).toBeVisible();
+    await expect(page.getByRole('dialog').getByText(/Key events/i).first()).toBeVisible();
     // The mock has Santiago Giménez scoring twice in Mexico 3-1 Iraq
     await expect(page.getByRole('dialog').getByText('Santiago Giménez').first()).toBeVisible();
+  });
+
+  test('game modal shows Key events / Commentary / Team sheets tabs', async ({ page }) => {
+    const liveCard = page.locator('aside').locator('section', { hasText: 'Live now' });
+    await liveCard.getByRole('button', { name: /3.+1/ }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByRole('button', { name: 'Key events' })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Commentary' })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Team sheets' })).toBeVisible();
+
+    // Without ESPN summary data (mock ids are not fetchable) the commentary
+    // and team-sheets tabs surface their fallbacks rather than empty panels.
+    await dialog.getByRole('button', { name: 'Commentary' }).click();
+    await expect(dialog.getByText(/No commentary feed available/i)).toBeVisible();
+    await dialog.getByRole('button', { name: 'Team sheets' }).click();
+    await expect(dialog.getByText(/No team sheets available/i)).toBeVisible();
+    // Back to events — the mock's timeline still renders
+    await dialog.getByRole('button', { name: 'Key events' }).click();
+    await expect(dialog.getByText('Santiago Giménez').first()).toBeVisible();
   });
 });
 

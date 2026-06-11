@@ -328,7 +328,12 @@ see `screenshots/redesign/` for evidence):
       venue, broadcasts, key-events timeline (cards now crisp CSS
       rectangles with aria-labels instead of emoji), ESPN stats/lineups/
       notes, loading/error/no-id fallbacks — modals tests +
-      `modal-game-*.png`
+      `modal-game-*.png`. Post-redesign addition: the modal body is now
+      tabbed (Key events · Commentary · Team sheets). Commentary renders
+      ESPN's play-by-play feed newest-first with goal/card entries
+      flagged, refreshes on the live cadence (aria-live polite), and
+      falls back gracefully when ESPN doesn't publish it. Team stats and
+      article notes live under Key events; lineups under Team sheets.
 - [x] Modal shell: accent colour per context, ESC/backdrop close, scroll
       lock, focus-visible rings — modals tests
 - [x] Footer: app name, syncing pulse, "using cached data" error state,
