@@ -294,19 +294,21 @@ function extractTeamRefs(scoreboard) {
 }
 
 // ── Public entry point — orchestrates everything ──────────────────────────────
-export async function fetchLiveState() {
+// `live` comes from the store's view of the *current* snapshot — it shortens
+// the scoreboard/standings cache TTLs during a match so 60-second ticks
+// actually reach the network. (It used to be inferred from the openfootball
+// baseline, whose fixtures are always 'scheduled', so it was never true and
+// live polling silently degraded to 5-minute freshness.)
+export async function fetchLiveState({ live = false } = {}) {
   // 1. baseline schedule from openfootball (skeleton groups + fixtures with no scores)
   const baseline = await fetchOpenFootball();
 
   // 2. ESPN scoreboard (covers the whole tournament window in one call)
-  const anyLive = (existing) =>
-    (existing?.fixtures ?? []).some((f) => f.status === 'live') ||
-    (existing?.knockoutMatches ?? []).some((m) => m.status === 'live');
-  const scoreboardTtl = anyLive(baseline) ? TTL.scoreboardLive : TTL.scoreboardIdle;
+  const scoreboardTtl = live ? TTL.scoreboardLive : TTL.scoreboardIdle;
   const sb = await swr('espn:scoreboard', () => fetchScoreboard(), scoreboardTtl);
 
   // 3. ESPN standings
-  const standingsTtl = anyLive(baseline) ? TTL.standingsLive : TTL.standingsIdle;
+  const standingsTtl = live ? TTL.standingsLive : TTL.standingsIdle;
   const st = await swr('espn:standings', () => fetchStandings(), standingsTtl);
 
   let fixtures = baseline.fixtures;
