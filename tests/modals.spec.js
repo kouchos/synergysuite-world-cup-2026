@@ -236,6 +236,44 @@ test.describe('Prize modal', () => {
   });
 });
 
+test.describe('Back button closes dialogs', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/?mock=1');
+    await expect(page.getByRole('button', { name: /Pool stage/ })).toBeVisible();
+  });
+
+  test('browser back closes an open dialog and stays on the page', async ({ page }) => {
+    await page.locator('header').getByRole('button', { name: /^Hazel$/ }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.goBack();
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+    // Still on the app, not navigated away
+    expect(page.url()).toContain('mock=1');
+    await expect(page.getByRole('button', { name: /Pool stage/ })).toBeVisible();
+  });
+
+  test('one back press dismisses the dialog even after cross-navigating between modals', async ({ page }) => {
+    await page.locator('header').getByRole('button', { name: /^Hazel$/ }).click();
+    await page.getByRole('dialog').getByRole('button', { name: /Brazil/ }).first().click();
+    await expect(page.getByRole('heading', { name: 'Brazil' })).toBeVisible();
+    await page.goBack();
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+    expect(page.url()).toContain('mock=1');
+  });
+
+  test('closing with ESC consumes the history entry so back then leaves the page', async ({ page }) => {
+    await page.locator('header').getByRole('button', { name: /^Hazel$/ }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+    // The entry pushed on open was consumed on close — the next back exits the
+    // app page (to the blank page the test started from).
+    await page.waitForTimeout(200); // let the async history.back() settle
+    await page.goBack();
+    expect(page.url()).toBe('about:blank');
+  });
+});
+
 test.describe('Cross-navigation between modals', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/?mock=1');
