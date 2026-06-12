@@ -58,10 +58,11 @@
     )[0],
   );
 
-  // Card tally per owned team (for "card leader" within their picks)
+  // Card tally per owned team (for "card leader" within their picks) —
+  // group + knockout, same scope as mostCardsLeaderboard.
   const cardsByTeam = $derived.by(() => {
     const tally = {};
-    for (const fx of state.fixtures ?? []) {
+    for (const fx of [...(state.fixtures ?? []), ...(state.knockoutMatches ?? [])]) {
       for (const ev of fx.events ?? []) {
         if (ev.type === 'yellow' || ev.type === 'red') {
           tally[ev.team] ??= { yellow: 0, red: 0 };
