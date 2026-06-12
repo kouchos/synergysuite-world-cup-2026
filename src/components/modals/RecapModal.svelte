@@ -98,6 +98,52 @@
       </section>
     {/if}
 
+    {#if recap.scorers.length}
+      <section class="mb-5">
+        <h3 class="type-kicker text-fg-mute kicker-slash mb-3">Scorers</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+          {#each recap.scorers as s (`${s.team}|${s.player}`)}
+            {@const t = TEAMS[s.team] ? teamFor(s.team) : null}
+            <div class="card-raised px-3 py-2 flex items-center gap-2.5 text-sm">
+              <span class="shrink-0" aria-hidden="true">⚽</span>
+              {#if s.goals > 1}<span class="type-display tnum text-gold shrink-0">{s.goals}×</span>{/if}
+              <span class="font-semibold truncate">{s.player}</span>
+              {#if t}<span class="text-fg-faint text-xs truncate">{t.flag} {t.name}</span>{/if}
+              {#if s.owner}
+                <span class="ml-auto w-1.5 h-1.5 rounded-full shrink-0" style:background-color={s.owner.color} title={s.owner.name} aria-hidden="true"></span>
+              {/if}
+            </div>
+          {/each}
+        </div>
+      </section>
+    {/if}
+
+    {#if recap.cards.length}
+      <section class="mb-5">
+        <h3 class="type-kicker text-gold/90 kicker-slash mb-3">
+          Cards <span class="text-fg-faint font-normal">({recap.cards.length})</span>
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+          {#each recap.cards as ev, i (i)}
+            {@const t = TEAMS[ev.team] ? teamFor(ev.team) : null}
+            <div class="card-raised px-3 py-2 flex items-center gap-2.5 text-sm">
+              <span
+                class="inline-block w-2.5 h-3.5 rounded-[2px] shrink-0 {ev.type === 'red' ? 'bg-[#ef4444]' : 'bg-[#fbbf24]'}"
+                role="img"
+                aria-label={ev.type === 'red' ? 'Red card' : 'Yellow card'}
+              ></span>
+              <span class="font-semibold truncate">{ev.player ?? 'Unknown player'}</span>
+              {#if t}<span class="text-fg-faint text-xs truncate">{t.flag} {t.name}</span>{/if}
+              {#if ev.minute != null}<span class="text-fg-faint text-xs tnum shrink-0">{ev.minute}′</span>{/if}
+              {#if ev.owner}
+                <span class="ml-auto w-1.5 h-1.5 rounded-full shrink-0" style:background-color={ev.owner.color} title={ev.owner.name} aria-hidden="true"></span>
+              {/if}
+            </div>
+          {/each}
+        </div>
+      </section>
+    {/if}
+
     {#if recap.movements.length}
       <section class="mb-5">
         <h3 class="type-kicker text-volt kicker-slash mb-3">Race movers</h3>

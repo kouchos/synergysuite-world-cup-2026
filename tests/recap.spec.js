@@ -33,6 +33,20 @@ test.describe('recapSince', () => {
     expect(recapHasContent(recap)).toBe(true);
   });
 
+  test('tallies scorers and lists cards, live games included', () => {
+    const recap = recapSince(MOCK_STATE, Date.now() - 1000, employees);
+    // Giménez's double comes from the live Mexico–Iraq game
+    const gimenez = recap.scorers.find((s) => s.player === 'Santiago Giménez');
+    expect(gimenez).toEqual(expect.objectContaining({ team: 'MEX', goals: 2 }));
+    expect(gimenez.owner.id).toBe('hazel');
+    // Lindelöf's second-half red from Spain–Sweden makes the cards list
+    expect(recap.cards).toContainEqual(
+      expect.objectContaining({ type: 'red', player: 'Victor Lindelöf', team: 'SWE' }),
+    );
+    // Sorted: top scorer first
+    expect(recap.scorers[0].goals).toBeGreaterThanOrEqual(recap.scorers[1].goals);
+  });
+
   test('England get their recap footnote, negative as ever', () => {
     const recap = recapSince(MOCK_STATE, Date.now() - 1000, employees);
     expect(recap.england).toMatch(/England beat Japan 2–1 — sixty years of hurt/);
@@ -61,6 +75,11 @@ test.describe('Recap UI', () => {
     await expect(dialog.getByRole('heading', { name: 'While you were sleeping' })).toBeVisible();
     await expect(dialog.getByText('Results', { exact: false }).first()).toBeVisible();
     await expect(dialog.getByText('Germany').first()).toBeVisible();
+    // Scorers and cards sections, fed by match events (live game included)
+    await expect(dialog.getByText('Scorers')).toBeVisible();
+    await expect(dialog.getByText('Santiago Giménez')).toBeVisible();
+    await expect(dialog.getByText('Cards', { exact: false }).first()).toBeVisible();
+    await expect(dialog.getByText('Victor Lindelöf').first()).toBeVisible();
     // The auto-recap toggle flips
     const toggle = dialog.getByRole('button', { name: /Auto-recap/ });
     await expect(toggle).toHaveText(/on/);
