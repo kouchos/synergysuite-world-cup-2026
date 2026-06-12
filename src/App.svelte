@@ -3,9 +3,13 @@
   import { fade } from 'svelte/transition';
   import { store } from './lib/state/store.svelte.js';
   import { modal } from './lib/state/modal.svelte.js';
+  import { ui } from './lib/state/ui.svelte.js';
+  import { celebrations } from './lib/state/celebrations.svelte.js';
   import { dur } from './lib/motion.js';
   import Header from './components/Header.svelte';
   import BrandTitle from './components/BrandTitle.svelte';
+  import BanterBanner from './components/BanterBanner.svelte';
+  import GoalFlash from './components/GoalFlash.svelte';
   import ViewTabs from './components/ViewTabs.svelte';
   import Countdown from './components/Countdown.svelte';
   import PoolView from './views/PoolView.svelte';
@@ -22,6 +26,21 @@
 
   onMount(() => {
     store.start();
+    // ?demo=goal — fire a sample celebration so the flash can be shown off
+    // (and tested) without waiting for a live goal.
+    if (new URLSearchParams(window.location.search).get('demo') === 'goal') {
+      const demo = (store.state.fixtures ?? []).find((f) => f.status === 'live') ?? store.state.fixtures?.[0];
+      if (demo) {
+        setTimeout(() => {
+          celebrations.push({
+            match: demo,
+            team: demo.home,
+            count: 1,
+            owner: store.employees.find((e) => e.teams.some((t) => t.fifaCode === demo.home)) ?? null,
+          });
+        }, 800);
+      }
+    }
   });
 
   const sourceLabel = $derived.by(() => {
@@ -62,6 +81,9 @@
   </div>
 
   <Header state={store.state} employees={store.employees} />
+  {#if !ui.banterHidden}
+    <BanterBanner state={store.state} employees={store.employees} />
+  {/if}
   <ViewTabs value={store.view} phase={store.phase} onSelect={selectView} />
   <Countdown snapshot={store.state} />
 
@@ -91,9 +113,16 @@
     <PrizeModal category={modal.current.params.category} />
   {/if}
 
+  <GoalFlash />
+
   <footer class="mt-2 px-3 sm:px-5 py-3 border-t border-line/60 text-[11px] type-cond text-fg-faint flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
     <span>SynergySuite World Cup 2026 sweepstake</span>
     <div class="flex items-center gap-3">
+      {#if ui.banterHidden}
+        <button type="button" class="pressable text-fg-faint hover:text-gold" onclick={() => ui.setBanterHidden(false)}>
+          Show Banter Banner
+        </button>
+      {/if}
       {#if store.syncing}
         <span class="inline-flex items-center gap-1.5 text-volt">
           <span class="w-1.5 h-1.5 rounded-full bg-volt live-dot"></span>

@@ -30,6 +30,8 @@
   }
   const homeOwner = $derived(ownerOf(match?.home));
   const awayOwner = $derived(ownerOf(match?.away));
+  // Two different owners' teams meeting head to head = sweepstake derby.
+  const isDerby = $derived(homeOwner && awayOwner && homeOwner.id !== awayOwner.id);
 
   const isLive = $derived(match?.status === 'live');
   const isFinal = $derived(match?.status === 'final');
@@ -270,6 +272,15 @@
         </button>
       </div>
 
+      {#if isDerby}
+        <div class="mt-4 flex items-center justify-center gap-2 text-sm rounded-md border border-gold/30 bg-gold/8 px-3 py-1.5">
+          <span aria-hidden="true">⚔️</span>
+          <span class="type-kicker text-gold">Sweepstake derby</span>
+          <span class="font-bold" style:color={homeOwner.color}>{homeOwner.name}</span>
+          <span class="text-fg-faint">vs</span>
+          <span class="font-bold" style:color={awayOwner.color}>{awayOwner.name}</span>
+        </div>
+      {/if}
       {#if venue}
         <div class="mt-4 text-center text-xs text-fg-faint type-cond">📍 {venue}</div>
       {/if}
