@@ -5,6 +5,7 @@
   import { modal } from './lib/state/modal.svelte.js';
   import { ui } from './lib/state/ui.svelte.js';
   import { celebrations } from './lib/state/celebrations.svelte.js';
+  import { rankSnapshot, recapSince, recapHasContent, MIN_GAP_MS, RECAP_WINDOW_MS } from './lib/state/recap.js';
   import { dur } from './lib/motion.js';
   import Header from './components/Header.svelte';
   import BrandTitle from './components/BrandTitle.svelte';
@@ -19,10 +20,47 @@
   import GameModal from './components/modals/GameModal.svelte';
   import TeamModal from './components/modals/TeamModal.svelte';
   import PrizeModal from './components/modals/PrizeModal.svelte';
+  import RecapModal from './components/modals/RecapModal.svelte';
 
   function selectView(id) {
     store.setView(id);
   }
+
+  // ── "While you were sleeping" visit bookkeeping ─────────────────────────────
+  // A localStorage marker records when the page was last opened (plus a tiny
+  // leaderboard snapshot for rank-movement diffs). On the next open we recap
+  // everything since then — capped at 48h, only after a 6h+ absence, only if
+  // something actually happened, and only unless the user disabled it.
+  const VISIT_KEY = 'synergysweep:last-visit';
+  let visitHandled = false;
+  $effect(() => {
+    // In live mode wait for the first real sync — diffing the mock baseline
+    // would produce a recap full of placeholder data.
+    const ready = store.mode === 'live' ? !!store.lastSync : true;
+    if (visitHandled || !ready) return;
+    visitHandled = true;
+
+    let prev = null;
+    try {
+      prev = JSON.parse(localStorage.getItem(VISIT_KEY) ?? 'null');
+    } catch {
+      prev = null;
+    }
+    try {
+      localStorage.setItem(
+        VISIT_KEY,
+        JSON.stringify({ ts: new Date().toISOString(), ranks: rankSnapshot(store.state, store.employees) }),
+      );
+    } catch {
+      // storage unavailable — recaps just won't auto-trigger
+    }
+
+    if (ui.recapDisabled || !prev?.ts) return;
+    const prevTs = new Date(prev.ts).getTime();
+    if (!Number.isFinite(prevTs) || Date.now() - prevTs < MIN_GAP_MS) return;
+    const recap = recapSince(store.state, prevTs, store.employees, prev.ranks ?? null);
+    if (recapHasContent(recap)) modal.recap(prevTs, prev.ranks ?? null);
+  });
 
   onMount(() => {
     store.start();
@@ -111,6 +149,8 @@
     <GameModal matchId={modal.current.params.matchId} />
   {:else if modal.current?.type === 'prize'}
     <PrizeModal category={modal.current.params.category} />
+  {:else if modal.current?.type === 'recap'}
+    <RecapModal sinceMs={modal.current.params.sinceMs} prevRanks={modal.current.params.prevRanks} />
   {/if}
 
   <GoalFlash />
@@ -123,6 +163,13 @@
           Show Banter Banner
         </button>
       {/if}
+      <button
+        type="button"
+        class="pressable text-fg-faint hover:text-fg"
+        aria-label="Show a recap of the last 48 hours"
+        title="What happened in the last 2 days"
+        onclick={() => modal.recap(Date.now() - RECAP_WINDOW_MS)}
+      >📰 recap</button>
       <button
         type="button"
         class="pressable text-fg-faint hover:text-fg"
