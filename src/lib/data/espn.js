@@ -44,3 +44,11 @@ export function fetchTeamSchedule(teamId) {
 export function fetchTeamRoster(teamId) {
   return getJson(`${BASE}/teams/${teamId}/roster`);
 }
+
+// News headlines. ESPN supports tournament-wide news and per-team filtering
+// via the team's ESPN id; there is no per-match or per-player news endpoint.
+// Articles only carry headline/description + a link out to espn.com.
+export function fetchNews(teamId = null, limit = 12) {
+  const qs = teamId ? `?team=${teamId}&limit=${limit}` : `?limit=${limit}`;
+  return getJson(`${BASE}/news${qs}`);
+}
