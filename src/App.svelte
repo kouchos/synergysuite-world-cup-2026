@@ -5,6 +5,7 @@
   import { modal } from './lib/state/modal.svelte.js';
   import { dur } from './lib/motion.js';
   import Header from './components/Header.svelte';
+  import BrandTitle from './components/BrandTitle.svelte';
   import ViewTabs from './components/ViewTabs.svelte';
   import Countdown from './components/Countdown.svelte';
   import PoolView from './views/PoolView.svelte';
@@ -55,7 +56,7 @@
       <span class="inline-block skew-x-12">WC26</span>
     </span>
     <div class="leading-none">
-      <div class="type-display text-[15px] leading-none">SynergySuite Sweepstake</div>
+      <BrandTitle />
       <div class="type-kicker text-fg-faint mt-1">FIFA World Cup 2026 · 11 Jun – 19 Jul</div>
     </div>
   </div>

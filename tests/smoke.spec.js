@@ -100,6 +100,18 @@ test.describe('Mid-tournament mock (?mock=1)', () => {
   });
 });
 
+test.describe('Brand title', () => {
+  test('animates from SynergySuite Sweepstake to SynergySweep with a green Sweep', async ({ page }) => {
+    await page.goto('/?mock=1');
+    const brand = page.locator('[aria-label="SynergySweep"]');
+    // Initial render, before the backspacing starts (1.4s grace after mount)
+    await expect(brand).toContainText('SynergySuite Sweepstake');
+    // After deleting back to "Synergy" and retyping "Sweep" (~3.5s total)
+    await expect(brand).toHaveText('SynergySweep', { timeout: 10_000 });
+    await expect(brand.locator('.text-volt')).toHaveText('Sweep');
+  });
+});
+
 test.describe('Post-final mock (?mock=final)', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/?mock=final');
