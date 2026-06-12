@@ -2,6 +2,7 @@ import employeesConfig from '../../../config/employees.json';
 import { MOCK_STATE, MOCK_STATE_FINAL } from '../data/mock.js';
 import { fetchLiveState, backfillEvents } from '../data/adapter.js';
 import { purge as purgeCache } from '../cache.js';
+import { celebrations } from './celebrations.svelte.js';
 
 const employees = employeesConfig.employees;
 
@@ -61,6 +62,9 @@ function createStore() {
   let diagnostics = $state(null);
   let nextRefresh = $state(null);
   let timerId = null;
+  // The first live fetch replaces the mock baseline — diffing against that
+  // would fire bogus goal celebrations, so only diff live-vs-live snapshots.
+  let hadLiveSnapshot = false;
 
   const phase = $derived(snapshot?.phase ?? 'group');
   const view = $derived(activeView ?? phase);
@@ -79,6 +83,8 @@ function createStore() {
     syncing = true;
     try {
       const next = await fetchLiveState();
+      if (hadLiveSnapshot) celebrations.fromSnapshots(snapshot, next, employees);
+      hadLiveSnapshot = true;
       snapshot = next;
       lastSync = new Date();
       lastError = null;

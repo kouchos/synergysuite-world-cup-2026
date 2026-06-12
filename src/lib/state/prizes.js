@@ -22,7 +22,7 @@ export function hasMatchActivity(state) {
   return liveOrFinal || (state.topScorers?.length ?? 0) > 0;
 }
 
-function teamOwner(fifaCode, employees) {
+export function teamOwner(fifaCode, employees) {
   for (const emp of employees) {
     if (emp.teams.some((t) => t.fifaCode === fifaCode)) return emp;
   }
