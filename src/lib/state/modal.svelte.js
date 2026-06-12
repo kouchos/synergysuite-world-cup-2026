@@ -67,6 +67,11 @@ function createModalStore() {
     prize(category) {
       this.open('prize', { category });
     },
+    // sinceMs: epoch ms the recap window starts at (capped to 48h inside);
+    // prevRanks: leaderboard snapshot from the previous visit, or null.
+    recap(sinceMs, prevRanks = null) {
+      this.open('recap', { sinceMs, prevRanks });
+    },
   };
 }
 

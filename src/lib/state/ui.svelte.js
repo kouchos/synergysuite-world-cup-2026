@@ -4,6 +4,7 @@
  */
 const BANTER_KEY = 'synergysweep:hide-banter';
 const HORN_KEY = 'synergysweep:mute-horn';
+const RECAP_KEY = 'synergysweep:disable-recap';
 
 function readFlag(key) {
   try {
@@ -24,6 +25,7 @@ function writeFlag(key, value) {
 function createUiStore() {
   let banterHidden = $state(readFlag(BANTER_KEY));
   let hornMuted = $state(readFlag(HORN_KEY));
+  let recapDisabled = $state(readFlag(RECAP_KEY));
   return {
     get banterHidden() {
       return banterHidden;
@@ -38,6 +40,13 @@ function createUiStore() {
     setHornMuted(value) {
       hornMuted = value;
       writeFlag(HORN_KEY, value);
+    },
+    get recapDisabled() {
+      return recapDisabled;
+    },
+    setRecapDisabled(value) {
+      recapDisabled = value;
+      writeFlag(RECAP_KEY, value);
     },
   };
 }
