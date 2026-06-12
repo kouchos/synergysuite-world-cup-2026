@@ -21,8 +21,8 @@ test.describe('banterLines', () => {
     // Hazel (4 pts) needs 2 reds to overtake Tom (7 pts)
     expect(lines).toContain('Hazel only needs 2 more reds to take the cards lead');
     expect(lines).toMatch(/Curaçao are holding the wooden spoon 🥄 — Jeff/);
-    // Earliest scheduled derby in the mock: Eoin's Canada vs Joy's DR Congo
-    expect(lines).toMatch(/Derby alert ⚔️ Eoin's Canada meet Joy's DR Congo/);
+    // Mexico vs Iraq are both Hazel's — the only true derby, and it's live
+    expect(lines).toMatch(/Derby LIVE: Hazel's Mexico 3–1 Hazel's Iraq — Hazel wins either way/);
   });
 
   test('England get singled out, twice per rotation', () => {
@@ -146,22 +146,27 @@ test.describe('Derby detection UI', () => {
     await expect(page.getByRole('button', { name: /Pool stage/ })).toBeVisible();
   });
 
-  test('match cards flag derbies between two owners but not same-owner games', async ({ page }) => {
-    // Spain (Eoin) vs Sweden (Tom) → derby
-    const derbyCard = page.locator('aside div.card').filter({ hasText: 'Spain' }).filter({ hasText: 'Sweden' });
+  test('match cards flag same-owner derbies, not ordinary owner-vs-owner games', async ({ page }) => {
+    // Mexico vs Iraq are both Hazel's teams → derby (she wins either way)
+    const derbyCard = page.locator('aside div.card').filter({ hasText: 'Mexico' }).filter({ hasText: 'Iraq' });
     await expect(derbyCard.getByText('derby')).toBeVisible();
-    // Mexico vs Iraq are both Hazel's teams → no derby
-    const sameOwnerCard = page.locator('aside div.card').filter({ hasText: 'Mexico' }).filter({ hasText: 'Iraq' });
-    await expect(sameOwnerCard.getByText('derby')).not.toBeVisible();
+    // Spain (Eoin) vs Sweden (Tom) is just a normal match — every team is owned
+    const normalCard = page.locator('aside div.card').filter({ hasText: 'Spain' }).filter({ hasText: 'Sweden' });
+    await expect(normalCard.getByText('derby')).not.toBeVisible();
   });
 
-  test('game modal shows the sweepstake derby strip with both owners', async ({ page }) => {
-    // Spain 4–1 Sweden in recent results
-    await page.locator('aside').getByRole('button', { name: /4.+1/ }).click();
+  test('game modal shows the derby strip only for same-owner games', async ({ page }) => {
+    // Mexico 3–1 Iraq (live) — both Hazel's
+    await page.locator('aside').getByRole('button', { name: /3.+1/ }).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByText('Sweepstake derby')).toBeVisible();
-    await expect(dialog.getByText('Eoin', { exact: true }).first()).toBeVisible();
-    await expect(dialog.getByText('Tom', { exact: true }).first()).toBeVisible();
+    await expect(dialog.getByText('wins either way')).toBeVisible();
+    await expect(dialog.getByText('Hazel', { exact: true }).first()).toBeVisible();
+    await page.keyboard.press('Escape');
+
+    // Spain 4–1 Sweden (Eoin vs Tom) — no derby strip
+    await page.locator('aside').getByRole('button', { name: /4.+1/ }).click();
+    await expect(page.getByRole('dialog').getByText('Sweepstake derby')).not.toBeVisible();
   });
 });
 

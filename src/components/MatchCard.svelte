@@ -17,8 +17,10 @@
     employees?.find((e) => e.teams.some((t) => t.fifaCode === match.away)) ?? null
   );
 
-  // Two different owners' teams meeting head to head = sweepstake derby.
-  const isDerby = $derived(homeOwner && awayOwner && homeOwner.id !== awayOwner.id);
+  // Both teams owned by the same employee = sweepstake derby: they win and
+  // lose at the same time. (Every team has an owner, so owner-vs-owner
+  // matchups are just... every match.)
+  const isDerby = $derived(homeOwner && awayOwner && homeOwner.id === awayOwner.id);
 
   const gameClickable = $derived(
     store.espnReachable && match.id && !String(match.id).startsWith('of-'),
@@ -36,7 +38,7 @@
 
 <div
   class="card lift p-2.5 flex items-center gap-2 {match.status === 'live' ? 'border-live/40' : isDerby ? 'border-gold/30' : ''}"
-  title={isDerby ? `Sweepstake derby: ${homeOwner.name} vs ${awayOwner.name}` : undefined}
+  title={isDerby ? `Sweepstake derby: ${homeOwner.name} vs ${homeOwner.name} — wins either way` : undefined}
 >
   <div class="flex-1 min-w-0 flex flex-col items-end gap-1">
     <button type="button" class="flex items-center gap-1.5 min-w-0 pressable disabled:cursor-default" onclick={() => openTeam(match.home)} disabled={!store.espnReachable}>

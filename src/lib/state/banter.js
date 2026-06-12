@@ -155,33 +155,33 @@ export function banterLines(state, employees) {
     }
   }
 
-  // ── Derbies — owners' teams meeting head to head ──
+  // ── Derbies — one employee's teams playing each other ──
   const matches = allMatches(state);
-  const derbyOf = (m) => {
+  const derbyOwner = (m) => {
     const ho = m.home ? teamOwner(m.home, employees) : null;
     const ao = m.away ? teamOwner(m.away, employees) : null;
-    return ho && ao && ho.id !== ao.id ? { ho, ao } : null;
+    return ho && ao && ho.id === ao.id ? ho : null;
   };
 
-  const liveDerby = matches.find((m) => m.status === 'live' && derbyOf(m));
+  const liveDerby = matches.find((m) => m.status === 'live' && derbyOwner(m));
   if (liveDerby) {
-    const { ho, ao } = derbyOf(liveDerby);
+    const owner = derbyOwner(liveDerby);
     const ht = teamFor(liveDerby.home);
     const at = teamFor(liveDerby.away);
     lines.push(
-      `Derby LIVE: ${ho.name}'s ${ht.name} ${liveDerby.homeGoals}–${liveDerby.awayGoals} ${ao.name}'s ${at.name} — someone's lunch is about to get very quiet`,
+      `Derby LIVE: ${owner.name}'s ${ht.name} ${liveDerby.homeGoals}–${liveDerby.awayGoals} ${owner.name}'s ${at.name} — ${owner.name} wins either way. And loses`,
     );
   }
 
   const nextDerby = matches
-    .filter((m) => m.status === 'scheduled' && m.utc && derbyOf(m))
+    .filter((m) => m.status === 'scheduled' && m.utc && derbyOwner(m))
     .sort((a, b) => new Date(a.utc) - new Date(b.utc))[0];
   if (nextDerby) {
-    const { ho, ao } = derbyOf(nextDerby);
+    const owner = derbyOwner(nextDerby);
     const ht = teamFor(nextDerby.home);
     const at = teamFor(nextDerby.away);
     lines.push(
-      `Derby alert ⚔️ ${ho.name}'s ${ht.name} meet ${ao.name}'s ${at.name} — ${formatKickoff(nextDerby.utc)}. Loser buys the coffees`,
+      `Derby alert ⚔️ ${owner.name}'s ${ht.name} meet ${owner.name}'s ${at.name} — ${formatKickoff(nextDerby.utc)}. ${owner.name} can't lose. Or win`,
     );
   }
 
