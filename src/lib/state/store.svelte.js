@@ -80,9 +80,10 @@ function createStore() {
 
   async function tick() {
     if (mode !== 'live') return;
+    if (syncing) return; // resume events can race the scheduled timer
     syncing = true;
     try {
-      const next = await fetchLiveState();
+      const next = await fetchLiveState({ live: activity === 'live' });
       if (hadLiveSnapshot) celebrations.fromSnapshots(snapshot, next, employees);
       hadLiveSnapshot = true;
       snapshot = next;
@@ -109,8 +110,30 @@ function createStore() {
     timerId = setTimeout(tick, wait);
   }
 
+  // Installed PWAs (and background tabs) get *resumed*, not reloaded: their
+  // timers are throttled or suspended while hidden, so without this the app
+  // shows the last snapshot until a long-overdue timeout finally fires. On
+  // becoming visible / focused / back online, refresh immediately — unless a
+  // sync just happened, where rescheduling the timer is enough.
+  function resumeRefresh() {
+    if (mode !== 'live') return;
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+    if (syncing) return;
+    if (lastSync && Date.now() - lastSync.getTime() < 20 * 1000) {
+      schedule();
+      return;
+    }
+    tick();
+  }
+
   function start() {
-    if (mode === 'live') tick();
+    if (mode !== 'live') return;
+    if (typeof window !== 'undefined') {
+      document.addEventListener('visibilitychange', resumeRefresh);
+      window.addEventListener('focus', resumeRefresh);
+      window.addEventListener('online', resumeRefresh);
+    }
+    tick();
   }
 
   return {
