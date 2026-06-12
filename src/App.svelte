@@ -123,6 +123,13 @@
           Show Banter Banner
         </button>
       {/if}
+      <button
+        type="button"
+        class="pressable text-fg-faint hover:text-fg"
+        aria-label={ui.hornMuted ? 'Unmute goal horn' : 'Mute goal horn'}
+        title="Air horn on goal celebrations"
+        onclick={() => ui.setHornMuted(!ui.hornMuted)}
+      >{ui.hornMuted ? '🔇 horn off' : '🔊 horn on'}</button>
       {#if store.syncing}
         <span class="inline-flex items-center gap-1.5 text-volt">
           <span class="w-1.5 h-1.5 rounded-full bg-volt live-dot"></span>
