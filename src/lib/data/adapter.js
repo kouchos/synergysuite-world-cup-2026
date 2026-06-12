@@ -17,6 +17,7 @@
 import { swr } from '../cache.js';
 import { fetchScoreboard, fetchStandings, fetchSummary } from './espn.js';
 import { fetchOpenFootball } from './openfootball.js';
+import { rankGroups } from '../state/groupRanking.js';
 
 // ── TTLs ─────────────────────────────────────────────────────────────────────
 // scoreboard/standings/summary refresh cadence — short during live play, long
@@ -203,17 +204,25 @@ function normaliseStandings(payload) {
         g?.id;
       const entries = g?.standings?.entries ?? g?.entries ?? [];
       const standings = entries
-        .map((e) => ({
-          fifaCode: e?.team?.abbreviation?.toUpperCase() ?? null,
-          p: statValue(e, ['gamesPlayed']),
-          w: statValue(e, ['wins']),
-          d: statValue(e, ['ties', 'draws']),
-          l: statValue(e, ['losses']),
-          gf: statValue(e, ['pointsFor', 'goalsFor']),
-          ga: statValue(e, ['pointsAgainst', 'goalsAgainst']),
-          gd: statValue(e, ['pointsDifferential', 'goalDifferential']),
-          pts: statValue(e, ['points']),
-        }))
+        .map((e) => {
+          const w = statValue(e, ['wins']);
+          const d = statValue(e, ['ties', 'draws']);
+          const gf = statValue(e, ['pointsFor', 'goalsFor']);
+          const ga = statValue(e, ['pointsAgainst', 'goalsAgainst']);
+          return {
+            fifaCode: e?.team?.abbreviation?.toUpperCase() ?? null,
+            p: statValue(e, ['gamesPlayed']),
+            w,
+            d,
+            l: statValue(e, ['losses']),
+            gf,
+            ga,
+            // ESPN's differential stat name varies across payloads; GF−GA is
+            // definitionally right whenever GF/GA came through.
+            gd: gf || ga ? gf - ga : statValue(e, ['pointsDifferential', 'goalDifferential']),
+            pts: statValue(e, ['points', 'totalPoints']) || w * 3 + d,
+          };
+        })
         .filter((s) => s.fifaCode);
       return { id, standings };
     })
@@ -314,7 +323,9 @@ export async function fetchLiveState() {
   // replace the group structure wholesale — ESPN's group IDs are internal
   // numeric ids that don't match the FIFA letter scheme.
   const espnGroups = st.value ? normaliseStandings(st.value) : [];
-  const groups = mergeGroupStats(baseline.groups ?? [], espnGroups);
+  // openfootball's baseline lists teams in draw order — re-rank each group by
+  // the FIFA tie-break rules once real stats are merged in.
+  const groups = rankGroups(mergeGroupStats(baseline.groups ?? [], espnGroups), fixtures);
   const topScorers = topScorersFrom([...fixtures, ...knockoutMatches]);
   const phase = detectPhase({ fixtures, knockoutMatches });
   const teamsRef = sb.value ? extractTeamRefs(sb.value) : {};
