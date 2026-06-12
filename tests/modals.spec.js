@@ -64,13 +64,24 @@ test.describe('Team modal', () => {
     await expect(page.getByRole('heading', { name: 'Mexico' })).toBeVisible();
   });
 
-  test('team modal shows overview/squad/schedule/group tabs', async ({ page }) => {
+  test('team modal shows overview/squad/schedule/group/news tabs', async ({ page }) => {
     const mexicoRow = page.locator('tr').filter({ hasText: 'Mexico' }).first();
     await mexicoRow.click();
     await expect(page.getByRole('dialog').getByRole('button', { name: /Overview/ })).toBeVisible();
     await expect(page.getByRole('dialog').getByRole('button', { name: /Squad/ })).toBeVisible();
     await expect(page.getByRole('dialog').getByRole('button', { name: /Schedule/ })).toBeVisible();
     await expect(page.getByRole('dialog').getByRole('button', { name: /Group/ })).toBeVisible();
+    await expect(page.getByRole('dialog').getByRole('button', { name: 'News' })).toBeVisible();
+  });
+
+  test('News tab in team modal shows fallback when ESPN data absent', async ({ page }) => {
+    const mexicoRow = page.locator('tr').filter({ hasText: 'Mexico' }).first();
+    await mexicoRow.click();
+    await page.getByRole('dialog').getByRole('button', { name: 'News' }).click();
+    // Mock mode has no teamsRef, so no ESPN team id to fetch news with
+    await expect(
+      page.getByRole('dialog').getByText(/News feed unavailable|No recent news|Loading news/i),
+    ).toBeVisible();
   });
 
   test('Squad tab in team modal opens; shows fallback when ESPN data absent', async ({ page }) => {
@@ -126,13 +137,18 @@ test.describe('Game modal', () => {
     await expect(page.getByRole('dialog').getByText('Santiago Giménez').first()).toBeVisible();
   });
 
-  test('game modal shows Key events / Commentary / Team sheets tabs', async ({ page }) => {
+  test('game modal shows Key events / Commentary / Team sheets / News tabs', async ({ page }) => {
     const liveCard = page.locator('aside').locator('section', { hasText: 'Live now' });
     await liveCard.getByRole('button', { name: /3.+1/ }).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByRole('button', { name: 'Key events' })).toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Commentary' })).toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Team sheets' })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'News' })).toBeVisible();
+
+    // Without ESPN team ids (mock mode) the news tab reports the fallback
+    await dialog.getByRole('button', { name: 'News' }).click();
+    await expect(dialog.getByText(/No news feed available for this match/i)).toBeVisible();
 
     // Without ESPN summary data (mock ids are not fetchable) the commentary
     // and team-sheets tabs surface their fallbacks rather than empty panels.

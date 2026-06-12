@@ -244,6 +244,24 @@ function topScorersFrom(fixtures) {
   return [...tally.values()].sort((a, b) => b.goals - a.goals).slice(0, 12);
 }
 
+// ── News ──────────────────────────────────────────────────────────────────────
+// ESPN /news payload → flat article list for the dialogs' News tabs. The feed
+// carries no body text — every article is a headline + blurb linking out to
+// espn.com, so the UI opens them in a new tab.
+export function normaliseNews(payload) {
+  return (payload?.articles ?? [])
+    .map((a) => ({
+      id: a?.dataSourceIdentifier ?? a?.links?.web?.href ?? a?.headline,
+      headline: a?.headline ?? null,
+      description: a?.description ?? null,
+      published: a?.published ?? a?.lastModified ?? null,
+      byline: a?.byline ?? null,
+      url: a?.links?.web?.href ?? a?.links?.mobile?.href ?? null,
+      image: a?.images?.[0]?.url ?? null,
+    }))
+    .filter((a) => a.headline && a.url);
+}
+
 // ── Phase detection ───────────────────────────────────────────────────────────
 function detectPhase({ fixtures, knockoutMatches }) {
   const final = knockoutMatches.find((m) => m.round === 'Final');

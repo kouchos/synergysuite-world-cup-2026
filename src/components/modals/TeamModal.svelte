@@ -1,12 +1,14 @@
 <script>
   import { teamFor, TEAMS } from '../../lib/data/teams.js';
   import { formatKickoff } from '../../lib/format.js';
-  import { fetchTeam, fetchTeamSchedule, fetchTeamRoster } from '../../lib/data/espn.js';
+  import { fetchTeam, fetchTeamSchedule, fetchTeamRoster, fetchNews } from '../../lib/data/espn.js';
+  import { normaliseNews } from '../../lib/data/adapter.js';
   import { swr } from '../../lib/cache.js';
   import { modal } from '../../lib/state/modal.svelte.js';
   import { store } from '../../lib/state/store.svelte.js';
   import Modal from '../Modal.svelte';
   import PlayerCard from '../PlayerCard.svelte';
+  import NewsList from '../NewsList.svelte';
 
   let { code } = $props();
 
@@ -69,6 +71,19 @@
       .finally(() => (rosterLoading = false));
   });
 
+  // News — same lazy pattern as the roster.
+  let newsData = $state(null);
+  let newsLoading = $state(false);
+  $effect(() => {
+    if (activeTab !== 'news' || newsData || !teamRef?.espnId) return;
+    newsLoading = true;
+    swr(`espn:news:team:${teamRef.espnId}`, () => fetchNews(teamRef.espnId), 10 * 60 * 1000)
+      .then(({ value }) => (newsData = value))
+      .catch(() => {})
+      .finally(() => (newsLoading = false));
+  });
+  const newsArticles = $derived(newsData ? normaliseNews(newsData) : []);
+
   // ESPN returns rosters in one of two shapes — flat array or position
   // groups. Normalise to [{ label, players }] for either case.
   function toPlayer(a) {
@@ -109,6 +124,7 @@
     { id: 'roster', label: 'Squad' },
     { id: 'schedule', label: 'Schedule' },
     { id: 'group', label: 'Group' },
+    { id: 'news', label: 'News' },
   ];
 
   function navigateGame(matchId) {
@@ -321,6 +337,21 @@
         </div>
       {:else}
         <p class="text-fg-faint text-sm">No group data.</p>
+      {/if}
+    </section>
+  {:else if activeTab === 'news'}
+    <section>
+      {#if newsLoading && !newsData}
+        <p class="text-fg-faint text-sm text-center py-6">Loading news…</p>
+      {:else if newsArticles.length === 0}
+        <p class="text-fg-faint text-sm text-center py-6">
+          {teamRef?.espnId
+            ? `No recent news for ${team.name}.`
+            : 'News feed unavailable — ESPN team ID not yet known.'}
+        </p>
+      {:else}
+        <NewsList articles={newsArticles} />
+        <p class="mt-3 text-xs text-fg-faint text-center">Articles open on espn.com in a new tab.</p>
       {/if}
     </section>
   {/if}

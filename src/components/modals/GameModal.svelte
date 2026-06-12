@@ -1,12 +1,14 @@
 <script>
   import { teamFor, TEAMS } from '../../lib/data/teams.js';
   import { formatKickoff } from '../../lib/format.js';
-  import { fetchSummary } from '../../lib/data/espn.js';
+  import { fetchSummary, fetchNews } from '../../lib/data/espn.js';
+  import { normaliseNews } from '../../lib/data/adapter.js';
   import { swr } from '../../lib/cache.js';
   import { modal } from '../../lib/state/modal.svelte.js';
   import { store } from '../../lib/state/store.svelte.js';
   import Modal from '../Modal.svelte';
   import PlayerCard from '../PlayerCard.svelte';
+  import NewsList from '../NewsList.svelte';
 
   let { matchId } = $props();
 
@@ -91,7 +93,43 @@
     { id: 'events', label: 'Key events' },
     { id: 'commentary', label: 'Commentary' },
     { id: 'sheets', label: 'Team sheets' },
+    { id: 'news', label: 'News' },
   ];
+
+  // ESPN has no per-match news endpoint, so "match news" is both teams' feeds
+  // merged — fetched lazily on first tab open, deduped (a preview of this very
+  // match shows up in both feeds), newest first, tagged with the team's flag.
+  let newsArticles = $state(null); // null = not fetched yet
+  let newsLoading = $state(false);
+  $effect(() => {
+    if (activeTab !== 'news' || newsArticles !== null || newsLoading) return;
+    const sources = [
+      { code: match?.home, flag: home?.flag },
+      { code: match?.away, flag: away?.flag },
+    ]
+      .map((s) => ({ ...s, espnId: s.code ? store.state.teamsRef?.[s.code]?.espnId : null }))
+      .filter((s) => s.espnId);
+    if (!sources.length) {
+      newsArticles = [];
+      return;
+    }
+    newsLoading = true;
+    Promise.all(
+      sources.map((s) =>
+        swr(`espn:news:team:${s.espnId}`, () => fetchNews(s.espnId), 10 * 60 * 1000)
+          .then(({ value }) => normaliseNews(value).map((a) => ({ ...a, tag: s.flag })))
+          .catch(() => []),
+      ),
+    )
+      .then((lists) => {
+        const seen = new Set();
+        newsArticles = lists
+          .flat()
+          .filter((a) => (seen.has(a.url) ? false : (seen.add(a.url), true)))
+          .sort((x, y) => new Date(y.published ?? 0) - new Date(x.published ?? 0));
+      })
+      .finally(() => (newsLoading = false));
+  });
 
   const venue = $derived(match?.venue ?? summary?.gameInfo?.venue?.fullName ?? null);
   const broadcasts = $derived(summary?.header?.competitions?.[0]?.broadcasts ?? []);
@@ -355,7 +393,7 @@
             : 'No commentary feed available for this match.'}
         </p>
       {/if}
-    {:else}
+    {:else if activeTab === 'sheets'}
       {#if summaryLoading && !summary}
         <p class="text-center text-fg-faint text-sm py-6">Loading team sheets…</p>
       {:else if hasLineups}
@@ -412,6 +450,20 @@
             ? 'Team sheets are published roughly an hour before kickoff.'
             : 'No team sheets available for this match.'}
         </p>
+      {/if}
+    {:else}
+      {#if newsLoading}
+        <p class="text-center text-fg-faint text-sm py-6">Loading news…</p>
+      {:else if !newsArticles?.length}
+        <p class="text-center text-fg-faint text-sm py-6">No news feed available for this match.</p>
+      {:else}
+        <section>
+          <h3 class="type-kicker text-fg-mute kicker-slash mb-3">
+            {home?.name ?? 'Home'} &amp; {away?.name ?? 'Away'} news
+          </h3>
+          <NewsList articles={newsArticles} />
+          <p class="mt-3 text-xs text-fg-faint text-center">Articles open on espn.com in a new tab.</p>
+        </section>
       {/if}
     {/if}
   </Modal>
