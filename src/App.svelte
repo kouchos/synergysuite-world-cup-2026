@@ -13,6 +13,7 @@
   import EmployeeModal from './components/modals/EmployeeModal.svelte';
   import GameModal from './components/modals/GameModal.svelte';
   import TeamModal from './components/modals/TeamModal.svelte';
+  import PrizeModal from './components/modals/PrizeModal.svelte';
 
   function selectView(id) {
     store.setView(id);
@@ -85,6 +86,8 @@
     <TeamModal code={modal.current.params.code} />
   {:else if modal.current?.type === 'game'}
     <GameModal matchId={modal.current.params.matchId} />
+  {:else if modal.current?.type === 'prize'}
+    <PrizeModal category={modal.current.params.category} />
   {/if}
 
   <footer class="mt-2 px-3 sm:px-5 py-3 border-t border-line/60 text-[11px] type-cond text-fg-faint flex flex-wrap items-center justify-between gap-x-4 gap-y-1">

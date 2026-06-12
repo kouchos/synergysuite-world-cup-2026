@@ -50,9 +50,9 @@ export function overallLeaderboard(state, employees) {
     .sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
 }
 
-export function worstTeam(state, employees) {
+export function worstTeamRanking(state, employees) {
   const byTeam = standingsByTeam(state);
-  const ranked = Object.values(byTeam)
+  return Object.values(byTeam)
     .map((row) => ({
       row,
       owner: teamOwner(row.fifaCode, employees),
@@ -64,7 +64,10 @@ export function worstTeam(state, employees) {
       if (a.exitRound && b.exitRound && a.exitRound !== b.exitRound) return a.exitRound - b.exitRound;
       return a.row.pts - b.row.pts || a.row.gd - b.row.gd || a.row.gf - b.row.gf;
     });
-  return ranked[0] ?? null;
+}
+
+export function worstTeam(state, employees) {
+  return worstTeamRanking(state, employees)[0] ?? null;
 }
 
 export function mostCardsLeaderboard(state, employees) {
@@ -92,10 +95,116 @@ export function mostCardsLeaderboard(state, employees) {
     .sort((a, b) => b.points - a.points);
 }
 
+export function goldenBootTable(state, employees) {
+  return (state.topScorers ?? []).map((s) => ({ ...s, owner: teamOwner(s.team, employees) }));
+}
+
 export function goldenBootLeader(state, employees) {
-  const top = (state.topScorers ?? [])[0];
-  if (!top) return null;
-  return { ...top, owner: teamOwner(top.team, employees) };
+  return goldenBootTable(state, employees)[0] ?? null;
+}
+
+// ── Drill-down timelines ──────────────────────────────────────────────────────
+// Flatten match events with their parent match, ordered by kickoff then minute.
+function chronologicalEvents(matches) {
+  const out = [];
+  for (const match of matches) {
+    for (const ev of match.events ?? []) out.push({ ...ev, match });
+  }
+  return out.sort(
+    (a, b) => new Date(a.match.utc) - new Date(b.match.utc) || (a.minute ?? 0) - (b.minute ?? 0),
+  );
+}
+
+/**
+ * Every card earned by one employee's teams, chronological, with a running
+ * points balance. Scans the same source as mostCardsLeaderboard (group
+ * fixtures) so the final running total always matches the leaderboard.
+ */
+export function cardTimeline(state, employee) {
+  const owned = new Set(employee.teams.map((t) => t.fifaCode));
+  let running = 0;
+  return chronologicalEvents(state.fixtures ?? [])
+    .filter((ev) => (ev.type === 'yellow' || ev.type === 'red') && owned.has(ev.team))
+    .map((ev) => {
+      const points = ev.type === 'red' ? 2 : 1;
+      running += points;
+      return { ...ev, points, running };
+    });
+}
+
+/** Goals by one player, chronological, with a running tally. */
+export function goalTimeline(state, player, team) {
+  let running = 0;
+  return chronologicalEvents([...(state.fixtures ?? []), ...(state.knockoutMatches ?? [])])
+    .filter((ev) => ev.type === 'goal' && ev.player === player && ev.team === team)
+    .map((ev) => {
+      running += 1;
+      return { ...ev, running };
+    });
+}
+
+/**
+ * Completed group-stage results for one employee's teams with a running
+ * sweepstake-points balance (win 3 / draw 1 / loss 0 — same currency as
+ * overallLeaderboard, which sums group standings pts).
+ */
+export function pointsTimeline(state, employee) {
+  const owned = new Set(employee.teams.map((t) => t.fifaCode));
+  let running = 0;
+  const rows = [];
+  const finals = (state.fixtures ?? [])
+    .filter((f) => f.status === 'final' && (owned.has(f.home) || owned.has(f.away)))
+    .sort((a, b) => new Date(a.utc) - new Date(b.utc));
+  for (const match of finals) {
+    for (const side of ['home', 'away']) {
+      if (!owned.has(match[side])) continue;
+      const gf = side === 'home' ? match.homeGoals : match.awayGoals;
+      const ga = side === 'home' ? match.awayGoals : match.homeGoals;
+      const points = gf > ga ? 3 : gf === ga ? 1 : 0;
+      running += points;
+      rows.push({
+        match,
+        team: match[side],
+        opponent: side === 'home' ? match.away : match.home,
+        gf,
+        ga,
+        result: gf > ga ? 'W' : gf === ga ? 'D' : 'L',
+        points,
+        running,
+      });
+    }
+  }
+  return rows;
+}
+
+/**
+ * One team's completed matches (group + knockout), chronological, with a
+ * running group-points balance. Knockout games carry no group points but are
+ * included so the worst-team story is complete.
+ */
+export function teamResults(state, fifaCode) {
+  let running = 0;
+  return [...(state.fixtures ?? []), ...(state.knockoutMatches ?? [])]
+    .filter((m) => (m.home === fifaCode || m.away === fifaCode) && m.status === 'final')
+    .sort((a, b) => new Date(a.utc) - new Date(b.utc))
+    .map((match) => {
+      const home = match.home === fifaCode;
+      const gf = home ? match.homeGoals : match.awayGoals;
+      const ga = home ? match.awayGoals : match.homeGoals;
+      const isGroup = match.stage === 'group' || (!match.round && match.group);
+      const points = isGroup ? (gf > ga ? 3 : gf === ga ? 1 : 0) : null;
+      if (points != null) running += points;
+      return {
+        match,
+        opponent: home ? match.away : match.home,
+        gf,
+        ga,
+        result: gf > ga ? 'W' : gf === ga ? 'D' : 'L',
+        points,
+        running,
+        round: match.round ?? null,
+      };
+    });
 }
 
 export function tournamentWinner(state, employees) {

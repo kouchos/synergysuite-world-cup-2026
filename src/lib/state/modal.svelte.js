@@ -3,7 +3,7 @@
  * modal; the Modal renderer in App.svelte reads `current` and picks the right
  * child component.
  *
- * Types currently supported: 'employee', 'team', 'game'.
+ * Types currently supported: 'employee', 'team', 'game', 'prize'.
  */
 function createModalStore() {
   let current = $state(null);
@@ -27,6 +27,10 @@ function createModalStore() {
     },
     game(matchId) {
       this.open('game', { matchId });
+    },
+    // category: 'overall' | 'worst' | 'cards' | 'boot'
+    prize(category) {
+      this.open('prize', { category });
     },
   };
 }

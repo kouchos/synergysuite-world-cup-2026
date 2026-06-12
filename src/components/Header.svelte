@@ -14,11 +14,24 @@
 
   let { state: snapshot, employees } = $props();
 
-  function openEmployee(emp) {
+  // Inner buttons live inside the clickable prize tiles, so they stop the
+  // click from bubbling up and opening the prize standings dialog too.
+  function openEmployee(emp, e) {
+    e?.stopPropagation();
     if (emp) modal.employee(emp.id);
   }
-  function openTeam(code) {
+  function openTeam(code, e) {
+    e?.stopPropagation();
     if (store.espnReachable && code && TEAMS[code]) modal.team(code);
+  }
+  function openPrize(category) {
+    modal.prize(category);
+  }
+  function prizeKeydown(e, category) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      modal.prize(category);
+    }
   }
 
   // Brand chip — hides gracefully if the logo file isn't shipped.
@@ -97,10 +110,15 @@
       <!-- Overall leader — the headline tile -->
       <div class="card clip-corner p-3.5 sm:p-4 col-span-2 lg:col-span-1
         bg-[linear-gradient(125deg,color-mix(in_srgb,var(--color-volt)_11%,var(--color-ink-2)),var(--color-ink-2)_62%)]
-        border-volt/30">
-        <div class="type-kicker text-volt kicker-slash mb-2.5">Overall leader</div>
+        border-volt/30 cursor-pointer lift"
+        role="button" tabindex="0" aria-label="Open the full overall standings"
+        onclick={() => openPrize('overall')} onkeydown={(e) => prizeKeydown(e, 'overall')}>
+        <div class="mb-2.5 flex items-center justify-between gap-2">
+          <span class="type-kicker text-volt kicker-slash">Overall leader</span>
+          <span class="type-kicker text-fg-faint" aria-hidden="true">table ›</span>
+        </div>
         {#if overallLeader}
-          <button type="button" class="group flex items-center gap-3 text-left pressable" onclick={() => openEmployee(overallLeader.employee)}>
+          <button type="button" class="group flex items-center gap-3 text-left pressable" onclick={(e) => openEmployee(overallLeader.employee, e)}>
             <span
               class="w-2 self-stretch rounded-sm shrink-0"
               style:background-color={overallLeader.employee.color}
@@ -116,17 +134,22 @@
       </div>
 
       <!-- Worst team -->
-      <div class="card p-3 sm:p-3.5 flex flex-col">
-        <div class="type-kicker text-live/80 mb-2">Worst team</div>
+      <div class="card p-3 sm:p-3.5 flex flex-col cursor-pointer lift"
+        role="button" tabindex="0" aria-label="Open the full worst-team table"
+        onclick={() => openPrize('worst')} onkeydown={(e) => prizeKeydown(e, 'worst')}>
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <span class="type-kicker text-live/80">Worst team</span>
+          <span class="type-kicker text-fg-faint" aria-hidden="true">table ›</span>
+        </div>
         {#if worst}
           {@const t = teamFor(worst.row.fifaCode)}
-          <button type="button" class="flex items-center gap-2.5 min-w-0 text-left pressable group" onclick={() => openTeam(worst.row.fifaCode)} disabled={!store.espnReachable}>
+          <button type="button" class="flex items-center gap-2.5 min-w-0 text-left pressable group" onclick={(e) => openTeam(worst.row.fifaCode, e)} disabled={!store.espnReachable}>
             <span class="text-3xl leading-none shrink-0" aria-hidden="true">{t.flag}</span>
             <span class="type-display text-[17px] sm:text-xl leading-[0.95] group-hover:text-live transition-colors">{t.name}</span>
           </button>
           <div class="mt-auto pt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1">
             {#if worst.owner}
-              <button type="button" class="pressable inline-flex items-center gap-1.5" onclick={() => openEmployee(worst.owner)}>
+              <button type="button" class="pressable inline-flex items-center gap-1.5" onclick={(e) => openEmployee(worst.owner, e)}>
                 <span class="w-1.5 h-1.5 rounded-full" style:background-color={worst.owner.color} aria-hidden="true"></span>
                 <span class="text-xs font-bold" style:color={worst.owner.color}>{worst.owner.name}</span>
               </button>
@@ -137,10 +160,15 @@
       </div>
 
       <!-- Most cards -->
-      <div class="card p-3 sm:p-3.5 flex flex-col">
-        <div class="type-kicker text-gold/90 mb-2">Most cards</div>
+      <div class="card p-3 sm:p-3.5 flex flex-col cursor-pointer lift"
+        role="button" tabindex="0" aria-label="Open the full most-cards standings"
+        onclick={() => openPrize('cards')} onkeydown={(e) => prizeKeydown(e, 'cards')}>
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <span class="type-kicker text-gold/90">Most cards</span>
+          <span class="type-kicker text-fg-faint" aria-hidden="true">table ›</span>
+        </div>
         {#if cardsLeader}
-          <button type="button" class="flex items-center gap-2.5 text-left pressable group" onclick={() => openEmployee(cardsLeader.employee)}>
+          <button type="button" class="flex items-center gap-2.5 text-left pressable group" onclick={(e) => openEmployee(cardsLeader.employee, e)}>
             <span class="w-1.5 self-stretch rounded-sm shrink-0" style:background-color={cardsLeader.employee.color} aria-hidden="true"></span>
             <span class="type-display text-lg sm:text-xl leading-[0.95] group-hover:text-gold transition-colors">{cardsLeader.employee.name}</span>
           </button>
@@ -153,17 +181,22 @@
       </div>
 
       <!-- Golden boot -->
-      <div class="card p-3 sm:p-3.5 flex flex-col col-span-2 lg:col-span-1">
-        <div class="type-kicker text-gold mb-2">Golden boot</div>
+      <div class="card p-3 sm:p-3.5 flex flex-col col-span-2 lg:col-span-1 cursor-pointer lift"
+        role="button" tabindex="0" aria-label="Open the full golden boot standings"
+        onclick={() => openPrize('boot')} onkeydown={(e) => prizeKeydown(e, 'boot')}>
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <span class="type-kicker text-gold">Golden boot</span>
+          <span class="type-kicker text-fg-faint" aria-hidden="true">table ›</span>
+        </div>
         {#if boot}
           {@const t = teamFor(boot.team)}
-          <button type="button" class="flex items-center gap-2.5 min-w-0 text-left pressable group" onclick={() => openTeam(boot.team)} disabled={!store.espnReachable}>
+          <button type="button" class="flex items-center gap-2.5 min-w-0 text-left pressable group" onclick={(e) => openTeam(boot.team, e)} disabled={!store.espnReachable}>
             <span class="text-3xl leading-none shrink-0" aria-hidden="true">{t.flag}</span>
             <span class="type-display text-[17px] sm:text-xl leading-[0.95] group-hover:text-gold transition-colors">{boot.player}</span>
           </button>
           <div class="mt-auto pt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1">
             {#if boot.owner}
-              <button type="button" class="pressable inline-flex items-center gap-1.5" onclick={() => openEmployee(boot.owner)}>
+              <button type="button" class="pressable inline-flex items-center gap-1.5" onclick={(e) => openEmployee(boot.owner, e)}>
                 <span class="w-1.5 h-1.5 rounded-full" style:background-color={boot.owner.color} aria-hidden="true"></span>
                 <span class="text-xs font-bold" style:color={boot.owner.color}>{boot.owner.name}</span>
               </button>
