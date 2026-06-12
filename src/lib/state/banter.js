@@ -2,8 +2,13 @@
  * The Banter Banner — auto-generated office trash talk derived from current
  * state. Pure: state + employees in, an array of one-liners out. The banner
  * component rotates through whatever this returns; empty array = no banner.
+ *
+ * Editorial policy (by popular demand of an Irish office): the tone is
+ * cheeky-to-insulting, and England get singled out — their lines appear
+ * twice per rotation and are negative regardless of results. A 5–0 England
+ * win is still, fundamentally, an England problem.
  */
-import { teamFor } from '../data/teams.js';
+import { teamFor, TEAMS } from '../data/teams.js';
 import { formatKickoff } from '../format.js';
 import {
   hasMatchActivity,
@@ -15,6 +20,60 @@ import {
 } from './prizes.js';
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+function allMatches(state) {
+  return [...(state.fixtures ?? []), ...(state.knockoutMatches ?? [])];
+}
+
+/** England-specific digs — always negative, win, lose or draw. */
+export function englandLines(state, employees) {
+  const lines = [];
+  if (!TEAMS.ENG) return lines;
+  const owner = teamOwner('ENG', employees);
+  const matches = allMatches(state).filter((m) => m.home === 'ENG' || m.away === 'ENG');
+
+  const live = matches.find((m) => m.status === 'live');
+  if (live) {
+    const gf = live.home === 'ENG' ? live.homeGoals : live.awayGoals;
+    const ga = live.home === 'ENG' ? live.awayGoals : live.homeGoals;
+    const opp = teamFor(live.home === 'ENG' ? live.away : live.home);
+    if (gf > ga) lines.push(`England lead ${opp.name} ${gf}–${ga} — relax, there's still plenty of time to ruin it`);
+    else if (gf < ga) lines.push(`England trail ${opp.name} ${ga}–${gf} — ah here, this is just lovely`);
+    else lines.push(`England level with ${opp.name} — penalties loom, and we all know how that ends`);
+  }
+
+  const lastPlayed = matches
+    .filter((m) => m.status === 'final' && m.homeGoals != null)
+    .sort((a, b) => new Date(b.utc) - new Date(a.utc))[0];
+  if (lastPlayed) {
+    const gf = lastPlayed.home === 'ENG' ? lastPlayed.homeGoals : lastPlayed.awayGoals;
+    const ga = lastPlayed.home === 'ENG' ? lastPlayed.awayGoals : lastPlayed.homeGoals;
+    const opp = teamFor(lastPlayed.home === 'ENG' ? lastPlayed.away : lastPlayed.home);
+    if (gf > ga && gf - ga >= 3) {
+      lines.push(`England put ${gf} past ${opp.name} and the BBC montage is already in production. It's still not coming home`);
+    } else if (gf > ga) {
+      lines.push(`England beat ${opp.name} ${gf}–${ga} — sixty years of hurt, briefly paused. Normal service will resume`);
+    } else if (gf === ga) {
+      lines.push(`England held ${gf}–${ga} by ${opp.name} — the most England result imaginable`);
+    } else {
+      lines.push(
+        `${opp.name} beat England ${ga}–${gf} — somewhere, an entire Irish office cheers${owner ? ` (sorry ${owner.name})` : ''}`,
+      );
+    }
+  }
+
+  const next = matches
+    .filter((m) => m.status === 'scheduled' && m.utc)
+    .sort((a, b) => new Date(a.utc) - new Date(b.utc))[0];
+  if (next) {
+    const opp = teamFor(next.home === 'ENG' ? next.away : next.home);
+    lines.push(`England face ${opp.name} ${formatKickoff(next.utc)} — the nation expects, history disagrees`);
+  }
+
+  // Always-on classic, so the rotation never goes an England-free cycle.
+  lines.push(`Sixty years of hurt and counting — it's not coming home`);
+  return lines;
+}
 
 export function banterLines(state, employees) {
   const lines = [];
@@ -28,20 +87,20 @@ export function banterLines(state, employees) {
       const gap = first.pts - second.pts;
       if (gap === 0) {
         lines.push(
-          `${first.employee.name} and ${second.employee.name} are level on ${first.pts} pts — goal difference is doing the talking`,
+          `${first.employee.name} and ${second.employee.name} are level on ${first.pts} pts — goal difference is doing the talking, loudly`,
         );
       } else if (gap <= 3) {
         lines.push(
-          `${first.employee.name} leads the race by ${plural(gap, 'pt')} — one ${second.employee.name} win flips it`,
+          `${first.employee.name} leads the race by ${plural(gap, 'pt')} — one ${second.employee.name} win flips it, not that ${first.employee.name} will stop going on about it`,
         );
       } else {
         lines.push(
-          `${first.employee.name} is running away with it — ${plural(gap, 'pt')} clear of ${second.employee.name}`,
+          `${first.employee.name} is ${plural(gap, 'pt')} clear and has become genuinely insufferable about it`,
         );
       }
       const last = overall[overall.length - 1];
       if (last.pts === 0) {
-        lines.push(`${last.employee.name} is still on 0 pts — six teams, zero wins, full confidence`);
+        lines.push(`${last.employee.name} is still on 0 pts — six teams and not one of them could be bothered`);
       }
     }
 
@@ -50,7 +109,7 @@ export function banterLines(state, employees) {
     if (cards[0]?.points > 0) {
       const leader = cards[0];
       lines.push(
-        `${leader.employee.name} tops the cards table with ${plural(leader.points, 'pt')} (${leader.yellow}×🟨 ${leader.red}×🟥)`,
+        `${leader.employee.name} tops the cards table with ${plural(leader.points, 'pt')} (${leader.yellow}×🟨 ${leader.red}×🟥) — their teams tackle first and apologise never`,
       );
       const chaser = cards[1];
       if (chaser && chaser.points < leader.points) {
@@ -61,7 +120,9 @@ export function banterLines(state, employees) {
       }
       const saint = cards[cards.length - 1];
       if (saint && saint.points === 0) {
-        lines.push(`${saint.employee.name}'s teams haven't picked up a single card — suspiciously well behaved`);
+        lines.push(
+          `${saint.employee.name}'s teams haven't picked up a single card — suspiciously well behaved, the cowards`,
+        );
       }
     }
 
@@ -71,8 +132,8 @@ export function banterLines(state, employees) {
       const t = teamFor(spoon.row.fifaCode);
       lines.push(
         spoon.owner
-          ? `${t.name} are holding the wooden spoon 🥄 — ${spoon.owner.name}'s pride is on the line`
-          : `${t.name} are holding the wooden spoon 🥄`,
+          ? `${t.name} are holding the wooden spoon 🥄 — ${spoon.owner.name} insists this is all part of the plan`
+          : `${t.name} are holding the wooden spoon 🥄 and nobody will even claim them`,
       );
     }
 
@@ -81,10 +142,12 @@ export function banterLines(state, employees) {
     if (boot[0]) {
       const top = boot[0];
       if (boot[1] && boot[1].goals === top.goals) {
-        lines.push(`${top.player} and ${boot[1].player} locked on ${top.goals} — the boot race is wide open`);
+        lines.push(
+          `${top.player} and ${boot[1].player} locked on ${top.goals} — the boot race is wide open and the punditry is unbearable`,
+        );
       } else if (top.owner) {
         lines.push(
-          `${top.player} leads the golden boot with ${plural(top.goals, 'goal')} — quietly delighting ${top.owner.name}`,
+          `${top.player} leads the golden boot with ${plural(top.goals, 'goal')} — ${top.owner.name} taking full personal credit, obviously`,
         );
       } else {
         lines.push(`${top.player} leads the golden boot with ${plural(top.goals, 'goal')}`);
@@ -93,24 +156,24 @@ export function banterLines(state, employees) {
   }
 
   // ── Derbies — owners' teams meeting head to head ──
-  const allMatches = [...(state.fixtures ?? []), ...(state.knockoutMatches ?? [])];
+  const matches = allMatches(state);
   const derbyOf = (m) => {
     const ho = m.home ? teamOwner(m.home, employees) : null;
     const ao = m.away ? teamOwner(m.away, employees) : null;
     return ho && ao && ho.id !== ao.id ? { ho, ao } : null;
   };
 
-  const liveDerby = allMatches.find((m) => m.status === 'live' && derbyOf(m));
+  const liveDerby = matches.find((m) => m.status === 'live' && derbyOf(m));
   if (liveDerby) {
     const { ho, ao } = derbyOf(liveDerby);
     const ht = teamFor(liveDerby.home);
     const at = teamFor(liveDerby.away);
     lines.push(
-      `Derby LIVE: ${ho.name}'s ${ht.name} ${liveDerby.homeGoals}–${liveDerby.awayGoals} ${ao.name}'s ${at.name} — bragging rights in play`,
+      `Derby LIVE: ${ho.name}'s ${ht.name} ${liveDerby.homeGoals}–${liveDerby.awayGoals} ${ao.name}'s ${at.name} — someone's lunch is about to get very quiet`,
     );
   }
 
-  const nextDerby = allMatches
+  const nextDerby = matches
     .filter((m) => m.status === 'scheduled' && m.utc && derbyOf(m))
     .sort((a, b) => new Date(a.utc) - new Date(b.utc))[0];
   if (nextDerby) {
@@ -118,9 +181,18 @@ export function banterLines(state, employees) {
     const ht = teamFor(nextDerby.home);
     const at = teamFor(nextDerby.away);
     lines.push(
-      `Derby alert ⚔️ ${ho.name}'s ${ht.name} meet ${ao.name}'s ${at.name} — ${formatKickoff(nextDerby.utc)}`,
+      `Derby alert ⚔️ ${ho.name}'s ${ht.name} meet ${ao.name}'s ${at.name} — ${formatKickoff(nextDerby.utc)}. Loser buys the coffees`,
     );
   }
 
-  return lines;
+  // ── Weave in the England digs — twice per rotation, leading the cycle ──
+  const eng = englandLines(state, employees);
+  const weighted = [];
+  const engQueue = [...eng, ...eng];
+  const general = [...lines];
+  while (general.length || engQueue.length) {
+    if (engQueue.length) weighted.push(engQueue.shift());
+    weighted.push(...general.splice(0, 2));
+  }
+  return weighted;
 }

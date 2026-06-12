@@ -3,6 +3,7 @@
  * ?nocache=1 purges never wipe user choices.
  */
 const BANTER_KEY = 'synergysweep:hide-banter';
+const HORN_KEY = 'synergysweep:mute-horn';
 
 function readFlag(key) {
   try {
@@ -22,6 +23,7 @@ function writeFlag(key, value) {
 
 function createUiStore() {
   let banterHidden = $state(readFlag(BANTER_KEY));
+  let hornMuted = $state(readFlag(HORN_KEY));
   return {
     get banterHidden() {
       return banterHidden;
@@ -29,6 +31,13 @@ function createUiStore() {
     setBanterHidden(value) {
       banterHidden = value;
       writeFlag(BANTER_KEY, value);
+    },
+    get hornMuted() {
+      return hornMuted;
+    },
+    setHornMuted(value) {
+      hornMuted = value;
+      writeFlag(HORN_KEY, value);
     },
   };
 }

@@ -6,6 +6,8 @@
  */
 import { detectGoals } from './goalDiff.js';
 import { teamOwner } from './prizes.js';
+import { ui } from './ui.svelte.js';
+import { airHorn } from '../sound.js';
 
 const DISPLAY_MS = 4500;
 const MAX_QUEUED = 3;
@@ -19,6 +21,7 @@ function createCelebrations() {
     current = c;
     clearTimeout(timer);
     timer = setTimeout(dismiss, DISPLAY_MS);
+    if (typeof window !== 'undefined' && !ui.hornMuted) airHorn();
   }
 
   function dismiss() {

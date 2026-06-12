@@ -1,7 +1,7 @@
 // The fun stuff: Banter Banner, derby detection, goal celebrations.
 // Unit tests run node-side against the pure modules; UI tests use mocks.
 import { test, expect } from '@playwright/test';
-import { banterLines } from '../src/lib/state/banter.js';
+import { banterLines, englandLines } from '../src/lib/state/banter.js';
 import { detectGoals } from '../src/lib/state/goalDiff.js';
 import { MOCK_STATE } from '../src/lib/data/mock.js';
 import employeesConfig from '../config/employees.json' with { type: 'json' };
@@ -25,6 +25,34 @@ test.describe('banterLines', () => {
     expect(lines).toMatch(/Derby alert ⚔️ Eoin's Canada meet Joy's DR Congo/);
   });
 
+  test('England get singled out, twice per rotation', () => {
+    const lines = banterLines(MOCK_STATE, employees);
+    // Latest England result in the mock is a 2–1 win over Japan — still negative
+    expect(lines.join('\n')).toMatch(/England beat Japan 2–1 — sixty years of hurt/);
+    expect(lines.join('\n')).toContain("it's not coming home");
+    // Every England line appears twice in the rotation
+    const engCount = lines.filter((l) => /England|coming home/.test(l)).length;
+    expect(engCount).toBeGreaterThanOrEqual(4);
+    // And the rotation opens with an England dig
+    expect(lines[0]).toMatch(/England|coming home/);
+  });
+
+  test('England stay insulted even after a thrashing, and a loss is celebrated', () => {
+    const win = {
+      fixtures: [
+        { id: 'x', home: 'ENG', away: 'PAN', homeGoals: 5, awayGoals: 0, status: 'final', utc: '2026-06-20T18:00:00Z' },
+      ],
+    };
+    expect(englandLines(win, employees).join('\n')).toMatch(/still not coming home/i);
+
+    const loss = {
+      fixtures: [
+        { id: 'y', home: 'FRA', away: 'ENG', homeGoals: 2, awayGoals: 0, status: 'final', utc: '2026-06-20T18:00:00Z' },
+      ],
+    };
+    expect(englandLines(loss, employees).join('\n')).toMatch(/Irish office cheers/);
+  });
+
   test('without match activity only fixture-based lines remain', () => {
     const quiet = {
       ...MOCK_STATE,
@@ -40,6 +68,8 @@ test.describe('banterLines', () => {
     expect(lines.length).toBeGreaterThan(0);
     expect(lines.join('\n')).toMatch(/Derby alert/);
     expect(lines.join('\n')).not.toMatch(/cards table/);
+    // The England fallback never sleeps
+    expect(lines.join('\n')).toContain("it's not coming home");
   });
 });
 
@@ -132,6 +162,28 @@ test.describe('Derby detection UI', () => {
     await expect(dialog.getByText('Sweepstake derby')).toBeVisible();
     await expect(dialog.getByText('Eoin', { exact: true }).first()).toBeVisible();
     await expect(dialog.getByText('Tom', { exact: true }).first()).toBeVisible();
+  });
+});
+
+test.describe('Goal horn mute', () => {
+  test('footer toggle mutes the horn and the choice survives a reload', async ({ page }) => {
+    await page.goto('/?mock=1');
+    const toggle = page.locator('footer').getByRole('button', { name: /goal horn/i });
+    await expect(toggle).toHaveText(/🔊 horn on/);
+    await toggle.click();
+    await expect(toggle).toHaveText(/🔇 horn off/);
+    await page.reload();
+    await expect(page.locator('footer').getByRole('button', { name: /goal horn/i })).toHaveText(/🔇 horn off/);
+  });
+
+  test('the flash overlay has a mute button that does not dismiss the celebration', async ({ page }) => {
+    await page.goto('/?mock=1&demo=goal');
+    const overlay = page.getByRole('button', { name: 'Dismiss goal celebration' });
+    await expect(overlay).toBeVisible({ timeout: 5000 });
+    await overlay.getByRole('button', { name: 'Mute goal horn' }).click();
+    // Mute toggled, celebration still on screen
+    await expect(overlay.getByRole('button', { name: 'Unmute goal horn' })).toBeVisible();
+    await expect(overlay.getByText('GOAL!')).toBeVisible();
   });
 });
 

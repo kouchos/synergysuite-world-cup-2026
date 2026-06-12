@@ -2,8 +2,16 @@
   import { fade, scale } from 'svelte/transition';
   import { teamFor, TEAMS } from '../lib/data/teams.js';
   import { celebrations } from '../lib/state/celebrations.svelte.js';
+  import { ui } from '../lib/state/ui.svelte.js';
   import { dur, reducedMotion } from '../lib/motion.js';
   import OwnerBadge from './OwnerBadge.svelte';
+
+  function dismissKeydown(e) {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') {
+      e.preventDefault();
+      celebrations.dismiss();
+    }
+  }
 
   const c = $derived(celebrations.current);
   const team = $derived(c && TEAMS[c.team] ? teamFor(c.team) : null);
@@ -28,14 +36,26 @@
 
 {#if c && team}
   <!-- Click anywhere to dismiss early; auto-dismisses after a few seconds. -->
-  <button
-    type="button"
+  <div
+    role="button"
+    tabindex="0"
     class="fixed inset-0 z-[70] w-full cursor-pointer overflow-hidden flex items-center justify-center"
     style:background="radial-gradient(120% 120% at 50% 110%, color-mix(in srgb, {accent} 30%, rgba(10,12,16,0.92)), rgba(10,12,16,0.92) 70%)"
     transition:fade={{ duration: dur(180) }}
     onclick={() => celebrations.dismiss()}
+    onkeydown={dismissKeydown}
     aria-label="Dismiss goal celebration"
   >
+    <button
+      type="button"
+      class="absolute top-4 right-4 z-10 pressable w-10 h-10 flex items-center justify-center rounded-lg bg-ink-2/70 border border-line text-lg"
+      aria-label={ui.hornMuted ? 'Unmute goal horn' : 'Mute goal horn'}
+      title={ui.hornMuted ? 'Unmute goal horn' : 'Mute goal horn'}
+      onclick={(e) => {
+        e.stopPropagation();
+        ui.setHornMuted(!ui.hornMuted);
+      }}
+    >{ui.hornMuted ? '🔇' : '🔊'}</button>
     {#each pieces as p (p.i)}
       <span
         class="confetti"
@@ -69,7 +89,7 @@
         </div>
       {/if}
     </div>
-  </button>
+  </div>
 {/if}
 
 <style>
