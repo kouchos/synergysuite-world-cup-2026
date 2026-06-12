@@ -14,23 +14,24 @@ test.describe('Mid-tournament mock (?mock=1)', () => {
   });
 
   test('header shows all 4 prize tiles with expected leaders', async ({ page }) => {
+    // Each tile is now a clickable card (role=button) named after its prize.
     // Overall leader = Hazel (her 6 teams accumulate the most points in the mock)
-    const overall = page.locator('header').getByText('Overall leader').locator('..');
+    const overall = page.locator('header').getByRole('button', { name: 'Open the full overall standings' });
     await expect(overall).toContainText('Hazel');
     await expect(overall).toContainText('15 pts');
 
     // Worst team = Curaçao (Jeff) — 0 pts, GD -5, GF 0
-    const worst = page.locator('header').getByText('Worst team', { exact: true }).locator('..');
+    const worst = page.locator('header').getByRole('button', { name: 'Open the full worst-team table' });
     await expect(worst).toContainText('Curaçao');
     await expect(worst).toContainText('Jeff');
 
     // Most cards = Tom (SWE + AUT yellow + red events = 7 weighted pts)
-    const cards = page.locator('header').getByText('Most cards', { exact: true }).locator('..');
+    const cards = page.locator('header').getByRole('button', { name: 'Open the full most-cards standings' });
     await expect(cards).toContainText('Tom');
     await expect(cards).toContainText('7 pts');
 
     // Golden boot = Lautaro Martínez (3 goals in the mock) → Tim
-    const boot = page.locator('header').getByText('Golden boot', { exact: true }).locator('..');
+    const boot = page.locator('header').getByRole('button', { name: 'Open the full golden boot standings' });
     await expect(boot).toContainText('Lautaro Martínez');
     await expect(boot).toContainText('Tim');
   });
@@ -121,11 +122,17 @@ test.describe('Post-final mock (?mock=final)', () => {
   });
 
   test('three secondary prize cards render with end-state stats', async ({ page }) => {
-    await expect(page.locator('article', { hasText: 'Worst team' })).toContainText('Curaçao');
-    await expect(page.locator('article', { hasText: 'Most cards' })).toContainText('Tom');
-    await expect(page.locator('article', { hasText: 'Most cards' })).toContainText('7 pts');
-    await expect(page.locator('article', { hasText: 'Golden boot' })).toContainText('Lautaro Martínez');
-    await expect(page.locator('article', { hasText: 'Golden boot' })).toContainText('7 goals');
+    // The prize cards are clickable (role=button) and named after their prize.
+    // Scope to <main> — the header renders equally-named tiles.
+    const main = page.locator('main');
+    const worstCard = main.getByRole('button', { name: 'Open the full worst-team table' });
+    const cardsCard = main.getByRole('button', { name: 'Open the full most-cards standings' });
+    const bootCard = main.getByRole('button', { name: 'Open the full golden boot standings' });
+    await expect(worstCard).toContainText('Curaçao');
+    await expect(cardsCard).toContainText('Tom');
+    await expect(cardsCard).toContainText('7 pts');
+    await expect(bootCard).toContainText('Lautaro Martínez');
+    await expect(bootCard).toContainText('7 goals');
   });
 
   test('Knockout view shows the fully resolved bracket with FRA in the Final', async ({ page }) => {

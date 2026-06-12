@@ -12,11 +12,24 @@
 
   let { state, employees } = $props();
 
-  function openTeam(code) {
+  // Inner buttons sit inside the clickable prize cards, so they stop the
+  // click from bubbling up and opening the prize standings dialog too.
+  function openTeam(code, e) {
+    e?.stopPropagation();
     if (store.espnReachable && TEAMS[code]) modal.team(code);
   }
-  function openEmployee(emp) {
+  function openEmployee(emp, e) {
+    e?.stopPropagation();
     if (emp) modal.employee(emp.id);
+  }
+  function openPrize(category) {
+    modal.prize(category);
+  }
+  function prizeKeydown(e, category) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      modal.prize(category);
+    }
   }
 
   const winner = $derived(tournamentWinner(state, employees));
@@ -68,16 +81,21 @@
     <!-- Secondary prize cards -->
     <section class="grid grid-cols-1 md:grid-cols-3 gap-3">
       <!-- Worst team -->
-      <article class="card clip-corner p-6 rise-in border-live/25" style:--stagger="80ms">
-        <div class="type-kicker text-live/90 kicker-slash mb-4">🥄 Worst team</div>
+      <div class="card clip-corner p-6 rise-in border-live/25 cursor-pointer lift" style:--stagger="80ms"
+        role="button" tabindex="0" aria-label="Open the full worst-team table"
+        onclick={() => openPrize('worst')} onkeydown={(e) => prizeKeydown(e, 'worst')}>
+        <div class="mb-4 flex items-center justify-between gap-2">
+          <span class="type-kicker text-live/90 kicker-slash">🥄 Worst team</span>
+          <span class="type-kicker text-fg-faint" aria-hidden="true">table ›</span>
+        </div>
         {#if worst}
           {@const t = teamFor(worst.row.fifaCode)}
           <div class="flex items-center gap-4">
-            <button type="button" class="text-5xl leading-none pressable disabled:cursor-default" aria-label={t.name} onclick={() => openTeam(worst.row.fifaCode)} disabled={!store.espnReachable}>{t.flag}</button>
+            <button type="button" class="text-5xl leading-none pressable disabled:cursor-default" aria-label={t.name} onclick={(e) => openTeam(worst.row.fifaCode, e)} disabled={!store.espnReachable}>{t.flag}</button>
             <div class="min-w-0">
-              <button type="button" class="type-display text-2xl leading-[0.95] pressable disabled:cursor-default text-left" onclick={() => openTeam(worst.row.fifaCode)} disabled={!store.espnReachable}>{t.name}</button>
+              <button type="button" class="type-display text-2xl leading-[0.95] pressable disabled:cursor-default text-left" onclick={(e) => openTeam(worst.row.fifaCode, e)} disabled={!store.espnReachable}>{t.name}</button>
               {#if worst.owner}
-                <button type="button" class="mt-2 block pressable" onclick={() => openEmployee(worst.owner)}>
+                <button type="button" class="mt-2 block pressable" onclick={(e) => openEmployee(worst.owner, e)}>
                   <OwnerBadge employee={worst.owner} size="lg" />
                 </button>
               {/if}
@@ -87,13 +105,18 @@
             {worst.row.pts} pts · GD {worst.row.gd >= 0 ? '+' : ''}{worst.row.gd} · {worst.row.gf} goals scored
           </div>
         {/if}
-      </article>
+      </div>
 
       <!-- Most cards -->
-      <article class="card clip-corner p-6 rise-in" style:--stagger="160ms">
-        <div class="type-kicker text-gold/90 kicker-slash mb-4">Most cards</div>
+      <div class="card clip-corner p-6 rise-in cursor-pointer lift" style:--stagger="160ms"
+        role="button" tabindex="0" aria-label="Open the full most-cards standings"
+        onclick={() => openPrize('cards')} onkeydown={(e) => prizeKeydown(e, 'cards')}>
+        <div class="mb-4 flex items-center justify-between gap-2">
+          <span class="type-kicker text-gold/90 kicker-slash">Most cards</span>
+          <span class="type-kicker text-fg-faint" aria-hidden="true">table ›</span>
+        </div>
         {#if cardsLeader}
-          <button type="button" class="pressable" onclick={() => openEmployee(cardsLeader.employee)}>
+          <button type="button" class="pressable" onclick={(e) => openEmployee(cardsLeader.employee, e)}>
             <OwnerBadge employee={cardsLeader.employee} size="xl" />
           </button>
           <div class="mt-4 flex items-center gap-4 text-fg-mute">
@@ -102,20 +125,25 @@
           </div>
           <div class="mt-3 type-display text-3xl text-gold tnum">{cardsLeader.points} pts</div>
         {/if}
-      </article>
+      </div>
 
       <!-- Golden boot -->
-      <article class="card clip-corner p-6 rise-in border-gold/25" style:--stagger="240ms">
-        <div class="type-kicker text-gold kicker-slash mb-4">👟 Golden boot</div>
+      <div class="card clip-corner p-6 rise-in border-gold/25 cursor-pointer lift" style:--stagger="240ms"
+        role="button" tabindex="0" aria-label="Open the full golden boot standings"
+        onclick={() => openPrize('boot')} onkeydown={(e) => prizeKeydown(e, 'boot')}>
+        <div class="mb-4 flex items-center justify-between gap-2">
+          <span class="type-kicker text-gold kicker-slash">👟 Golden boot</span>
+          <span class="type-kicker text-fg-faint" aria-hidden="true">table ›</span>
+        </div>
         {#if boot}
           {@const t = teamFor(boot.team)}
           <div class="flex items-center gap-4">
-            <button type="button" class="text-5xl leading-none pressable disabled:cursor-default" aria-label={t.name} onclick={() => openTeam(boot.team)} disabled={!store.espnReachable}>{t.flag}</button>
+            <button type="button" class="text-5xl leading-none pressable disabled:cursor-default" aria-label={t.name} onclick={(e) => openTeam(boot.team, e)} disabled={!store.espnReachable}>{t.flag}</button>
             <div class="min-w-0">
               <div class="type-display text-2xl leading-[0.95]">{boot.player}</div>
-              <button type="button" class="text-sm text-fg-mute mt-1 pressable disabled:cursor-default" onclick={() => openTeam(boot.team)} disabled={!store.espnReachable}>{t.name}</button>
+              <button type="button" class="text-sm text-fg-mute mt-1 pressable disabled:cursor-default" onclick={(e) => openTeam(boot.team, e)} disabled={!store.espnReachable}>{t.name}</button>
               {#if boot.owner}
-                <button type="button" class="mt-2 block pressable" onclick={() => openEmployee(boot.owner)}>
+                <button type="button" class="mt-2 block pressable" onclick={(e) => openEmployee(boot.owner, e)}>
                   <OwnerBadge employee={boot.owner} size="lg" />
                 </button>
               {/if}
@@ -123,7 +151,7 @@
           </div>
           <div class="mt-4 type-display text-3xl text-gold tnum">{boot.goals} goals</div>
         {/if}
-      </article>
+      </div>
     </section>
   </div>
 {/if}
