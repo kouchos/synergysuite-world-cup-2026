@@ -30,8 +30,9 @@
   }
   const homeOwner = $derived(ownerOf(match?.home));
   const awayOwner = $derived(ownerOf(match?.away));
-  // Two different owners' teams meeting head to head = sweepstake derby.
-  const isDerby = $derived(homeOwner && awayOwner && homeOwner.id !== awayOwner.id);
+  // Both teams owned by the same employee = sweepstake derby: they win and
+  // lose at the same time.
+  const isDerby = $derived(homeOwner && awayOwner && homeOwner.id === awayOwner.id);
 
   const isLive = $derived(match?.status === 'live');
   const isFinal = $derived(match?.status === 'final');
@@ -278,7 +279,8 @@
           <span class="type-kicker text-gold">Sweepstake derby</span>
           <span class="font-bold" style:color={homeOwner.color}>{homeOwner.name}</span>
           <span class="text-fg-faint">vs</span>
-          <span class="font-bold" style:color={awayOwner.color}>{awayOwner.name}</span>
+          <span class="font-bold" style:color={homeOwner.color}>{homeOwner.name}</span>
+          <span class="text-fg-faint">— wins either way</span>
         </div>
       {/if}
       {#if venue}
