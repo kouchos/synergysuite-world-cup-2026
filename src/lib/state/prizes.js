@@ -72,7 +72,7 @@ export function worstTeam(state, employees) {
 
 export function mostCardsLeaderboard(state, employees) {
   const cardsByTeam = {};
-  for (const fx of state.fixtures ?? []) {
+  for (const fx of [...(state.fixtures ?? []), ...(state.knockoutMatches ?? [])]) {
     for (const ev of fx.events ?? []) {
       if (ev.type === 'yellow' || ev.type === 'red') {
         cardsByTeam[ev.team] ??= { yellow: 0, red: 0 };
@@ -117,13 +117,13 @@ function chronologicalEvents(matches) {
 
 /**
  * Every card earned by one employee's teams, chronological, with a running
- * points balance. Scans the same source as mostCardsLeaderboard (group
- * fixtures) so the final running total always matches the leaderboard.
+ * points balance. Scans the same source as mostCardsLeaderboard (group +
+ * knockout matches) so the final running total always matches the leaderboard.
  */
 export function cardTimeline(state, employee) {
   const owned = new Set(employee.teams.map((t) => t.fifaCode));
   let running = 0;
-  return chronologicalEvents(state.fixtures ?? [])
+  return chronologicalEvents([...(state.fixtures ?? []), ...(state.knockoutMatches ?? [])])
     .filter((ev) => (ev.type === 'yellow' || ev.type === 'red') && owned.has(ev.team))
     .map((ev) => {
       const points = ev.type === 'red' ? 2 : 1;

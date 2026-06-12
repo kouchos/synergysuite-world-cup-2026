@@ -179,6 +179,16 @@ test.describe('Prize modal', () => {
     await expect(dialog.getByRole('button', { name: 'Hazel', exact: true })).toBeVisible();
   });
 
+  test('knockout-stage cards count in the race and appear in the timeline', async ({ page }) => {
+    await page.locator('header').getByText('Most cards', { exact: true }).click();
+    const dialog = page.getByRole('dialog');
+    // Tim's only card in the mock is De Paul's yellow in the live R16 ESP–ARG tie
+    await dialog.getByRole('button', { name: 'Tim', exact: true }).click();
+    await expect(dialog.getByText('Rodrigo De Paul')).toBeVisible();
+    await expect(dialog.getByText(/Spain 1–1 Argentina/)).toBeVisible();
+    await expect(dialog.getByText(/6 pts behind Tom/)).toBeVisible();
+  });
+
   test('cards drill-down tells a trailing player what they need to take the lead', async ({ page }) => {
     await page.locator('header').getByText('Most cards', { exact: true }).click();
     const dialog = page.getByRole('dialog');
