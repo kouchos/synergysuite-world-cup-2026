@@ -75,29 +75,9 @@ export function recapSince(state, sinceMs, employees, prevRanks = null) {
     .filter((r) => r.w + r.d + r.l + r.cardPts > 0)
     .sort((a, b) => b.gf - a.gf || b.w - a.w);
 
-  // Scorers and cards from the window's games — live ones included, since
-  // anything in a game that kicked off after the last visit was missed too.
-  const windowMatches = [...results, ...live];
-  const scorerTally = new Map();
-  const cards = [];
-  for (const m of windowMatches) {
-    for (const ev of m.events ?? []) {
-      if (ev.type === 'goal' && ev.player) {
-        const key = `${ev.team}|${ev.player}`;
-        const cur =
-          scorerTally.get(key) ??
-          { player: ev.player, team: ev.team, goals: 0, owner: teamOwner(ev.team, employees) };
-        cur.goals += 1;
-        scorerTally.set(key, cur);
-      } else if (ev.type === 'yellow' || ev.type === 'red') {
-        cards.push({ ...ev, match: m, owner: teamOwner(ev.team, employees) });
-      }
-    }
-  }
-  const scorers = [...scorerTally.values()].sort((a, b) => b.goals - a.goals);
-  cards.sort(
-    (a, b) => new Date(a.match.utc) - new Date(b.match.utc) || (a.minute ?? 0) - (b.minute ?? 0),
-  );
+  // One feed of the window's games — live ones included — newest first.
+  // Each card in the recap renders the scoreline plus its own key events.
+  const games = [...live, ...results].sort((a, b) => new Date(b.utc) - new Date(a.utc));
 
   // Rank movement vs the snapshot stored at the previous visit.
   let movements = [];
@@ -118,9 +98,9 @@ export function recapSince(state, sinceMs, employees, prevRanks = null) {
   const engResults = results.filter((m) => m.home === 'ENG' || m.away === 'ENG');
   const england = engResults.length ? englandLines({ fixtures: engResults }, employees)[0] : null;
 
-  return { since, results, live, scorers, cards, ownerDeltas, movements, england };
+  return { since, games, ownerDeltas, movements, england };
 }
 
 export function recapHasContent(recap) {
-  return recap.results.length > 0 || recap.live.length > 0;
+  return recap.games.length > 0;
 }

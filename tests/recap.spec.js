@@ -21,30 +21,25 @@ test.describe('recapSince', () => {
     expect(clampSince(now - 1000, now)).toBe(now - 1000);
   });
 
-  test('collects finished results, live games and per-owner deltas', () => {
+  test('collects finished and live games with per-owner deltas', () => {
     const recap = recapSince(MOCK_STATE, Date.now() - 1000, employees);
     // Mock finals are future-dated relative to the test run, so they all land in-window
-    expect(recap.results.length).toBeGreaterThan(5);
-    expect(recap.results.map((m) => m.id)).toContain('mock-esp-swe');
-    expect(recap.live.map((m) => m.id)).toContain('mock-mex-irq');
+    expect(recap.games.length).toBeGreaterThan(5);
+    expect(recap.games.map((m) => m.id)).toContain('mock-esp-swe');
+    expect(recap.games.map((m) => m.id)).toContain('mock-mex-irq'); // live counts too
     // Tom's teams collected 7 card pts in the window (SWE 4 + AUT 3)
     const tom = recap.ownerDeltas.find((d) => d.employee.id === 'tom');
     expect(tom.cardPts).toBe(7);
     expect(recapHasContent(recap)).toBe(true);
   });
 
-  test('tallies scorers and lists cards, live games included', () => {
+  test('games come newest first and carry their own events', () => {
     const recap = recapSince(MOCK_STATE, Date.now() - 1000, employees);
-    // Giménez's double comes from the live Mexico–Iraq game
-    const gimenez = recap.scorers.find((s) => s.player === 'Santiago Giménez');
-    expect(gimenez).toEqual(expect.objectContaining({ team: 'MEX', goals: 2 }));
-    expect(gimenez.owner.id).toBe('hazel');
-    // Lindelöf's second-half red from Spain–Sweden makes the cards list
-    expect(recap.cards).toContainEqual(
-      expect.objectContaining({ type: 'red', player: 'Victor Lindelöf', team: 'SWE' }),
-    );
-    // Sorted: top scorer first
-    expect(recap.scorers[0].goals).toBeGreaterThanOrEqual(recap.scorers[1].goals);
+    for (let i = 1; i < recap.games.length; i += 1) {
+      expect(new Date(recap.games[i - 1].utc) >= new Date(recap.games[i].utc)).toBe(true);
+    }
+    const espSwe = recap.games.find((m) => m.id === 'mock-esp-swe');
+    expect(espSwe.events.map((e) => e.player)).toContain('Victor Lindelöf');
   });
 
   test('England get their recap footnote, negative as ever', () => {
@@ -73,13 +68,15 @@ test.describe('Recap UI', () => {
     await page.locator('footer').getByRole('button', { name: /recap of the last 48 hours/i }).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByRole('heading', { name: 'While you were sleeping' })).toBeVisible();
-    await expect(dialog.getByText('Results', { exact: false }).first()).toBeVisible();
-    await expect(dialog.getByText('Germany').first()).toBeVisible();
-    // Scorers and cards sections, fed by match events (live game included)
-    await expect(dialog.getByText('Scorers')).toBeVisible();
-    await expect(dialog.getByText('Santiago Giménez')).toBeVisible();
-    await expect(dialog.getByText('Cards', { exact: false }).first()).toBeVisible();
-    await expect(dialog.getByText('Victor Lindelöf').first()).toBeVisible();
+    await expect(dialog.getByText('Matches', { exact: false }).first()).toBeVisible();
+    // Each game is its own card with the scoreline and its key events inside
+    const espSweCard = dialog.locator('button').filter({ hasText: 'Spain' }).filter({ hasText: 'Sweden' });
+    await expect(espSweCard).toContainText('4–1');
+    await expect(espSweCard.getByText('Victor Lindelöf').first()).toBeVisible();
+    await expect(espSweCard.getByText('Lamine Yamal')).toBeVisible();
+    // The live Mexico game appears as a card too, with its events
+    const mexCard = dialog.locator('button').filter({ hasText: 'Mexico' }).filter({ hasText: 'Iraq' });
+    await expect(mexCard.getByText('Santiago Giménez').first()).toBeVisible();
     // The auto-recap toggle flips
     const toggle = dialog.getByRole('button', { name: /Auto-recap/ });
     await expect(toggle).toHaveText(/on/);

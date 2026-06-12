@@ -34,56 +34,40 @@
     <span class="text-fg-faint">(recaps cover at most the last 48 hours)</span>
   </p>
 
-  {#if recap.results.length === 0 && recap.live.length === 0}
+  {#if recap.games.length === 0}
     <div class="card clip-corner px-6 py-10 text-center">
       <div class="text-5xl mb-3" aria-hidden="true">😴</div>
       <p class="text-fg-mute text-sm">All quiet — no games finished in this window.</p>
     </div>
   {:else}
-    {#if recap.live.length}
-      <section class="mb-5">
-        <h3 class="type-kicker text-live kicker-slash mb-3">Happening right now</h3>
-        <div class="space-y-1.5">
-          {#each recap.live as m (m.id)}
-            {@const ht = TEAMS[m.home] ? teamFor(m.home) : null}
-            {@const at = TEAMS[m.away] ? teamFor(m.away) : null}
-            {#if ht && at}
-              <button type="button" class="w-full text-left card-raised lift px-3 py-2 disabled:cursor-default flex items-center gap-2 text-sm border-live/30"
-                onclick={() => navigateGame(m.id)} disabled={!store.espnReachable}>
+    <section class="mb-5">
+      <h3 class="type-kicker text-fg-mute kicker-slash mb-3">
+        Matches <span class="text-fg-faint font-normal">({recap.games.length}, newest first)</span>
+      </h3>
+      <div class="space-y-2">
+        {#each recap.games as m (m.id)}
+          {@const ht = TEAMS[m.home] ? teamFor(m.home) : null}
+          {@const at = TEAMS[m.away] ? teamFor(m.away) : null}
+          {@const ho = ownerDot(m.home)}
+          {@const ao = ownerDot(m.away)}
+          {@const isLive = m.status === 'live'}
+          {@const events = [...(m.events ?? [])].sort((a, b) => (a.minute ?? 0) - (b.minute ?? 0))}
+          {#if ht && at}
+            <button
+              type="button"
+              class="w-full text-left card-raised lift p-3 disabled:cursor-default {isLive ? 'border-live/30' : ''}"
+              onclick={() => navigateGame(m.id)}
+              disabled={!store.espnReachable}
+            >
+              <!-- Scoreline header -->
+              <div class="flex items-center gap-2 text-sm">
                 <span aria-hidden="true">{ht.flag}</span>
-                <span class="font-medium truncate flex-1">{ht.name}</span>
-                <span class="type-display tnum text-base">{m.homeGoals}–{m.awayGoals}</span>
-                <span class="font-medium truncate flex-1 text-right">{at.name}</span>
-                <span aria-hidden="true">{at.flag}</span>
-                <span class="text-live text-xs type-display tnum shrink-0">{m.minute}'</span>
-              </button>
-            {/if}
-          {/each}
-        </div>
-      </section>
-    {/if}
-
-    {#if recap.results.length}
-      <section class="mb-5">
-        <h3 class="type-kicker text-fg-mute kicker-slash mb-3">
-          Results <span class="text-fg-faint font-normal">({recap.results.length})</span>
-        </h3>
-        <div class="space-y-1.5">
-          {#each recap.results as m (m.id)}
-            {@const ht = TEAMS[m.home] ? teamFor(m.home) : null}
-            {@const at = TEAMS[m.away] ? teamFor(m.away) : null}
-            {@const ho = ownerDot(m.home)}
-            {@const ao = ownerDot(m.away)}
-            {#if ht && at}
-              <button type="button" class="w-full text-left card-raised lift px-3 py-2 disabled:cursor-default flex items-center gap-2 text-sm"
-                onclick={() => navigateGame(m.id)} disabled={!store.espnReachable}>
-                <span aria-hidden="true">{ht.flag}</span>
-                <span class="font-medium truncate flex-1 inline-flex items-center gap-1.5">
+                <span class="font-semibold truncate flex-1 inline-flex items-center gap-1.5">
                   {ht.name}
                   {#if ho}<span class="w-1.5 h-1.5 rounded-full shrink-0" style:background-color={ho.color} title={ho.name} aria-hidden="true"></span>{/if}
                 </span>
-                <span class="type-display tnum text-base">{m.homeGoals}–{m.awayGoals}</span>
-                <span class="font-medium truncate flex-1 inline-flex items-center justify-end gap-1.5">
+                <span class="type-display tnum text-lg">{m.homeGoals}–{m.awayGoals}</span>
+                <span class="font-semibold truncate flex-1 inline-flex items-center justify-end gap-1.5">
                   {#if ao}<span class="w-1.5 h-1.5 rounded-full shrink-0" style:background-color={ao.color} title={ao.name} aria-hidden="true"></span>{/if}
                   {at.name}
                 </span>
@@ -91,58 +75,40 @@
                 {#if ho && ao && ho.id === ao.id}
                   <span class="type-kicker text-[9px] text-gold shrink-0" title="Sweepstake derby">⚔️</span>
                 {/if}
-              </button>
-            {/if}
-          {/each}
-        </div>
-      </section>
-    {/if}
+                {#if isLive}
+                  <span class="text-live text-xs type-display tnum shrink-0 inline-flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-live live-dot" aria-hidden="true"></span>{m.minute}'
+                  </span>
+                {:else}
+                  <span class="type-kicker text-fg-faint shrink-0">FT</span>
+                {/if}
+              </div>
 
-    {#if recap.scorers.length}
-      <section class="mb-5">
-        <h3 class="type-kicker text-fg-mute kicker-slash mb-3">Scorers</h3>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-          {#each recap.scorers as s (`${s.team}|${s.player}`)}
-            {@const t = TEAMS[s.team] ? teamFor(s.team) : null}
-            <div class="card-raised px-3 py-2 flex items-center gap-2.5 text-sm">
-              <span class="shrink-0" aria-hidden="true">⚽</span>
-              {#if s.goals > 1}<span class="type-display tnum text-gold shrink-0">{s.goals}×</span>{/if}
-              <span class="font-semibold truncate">{s.player}</span>
-              {#if t}<span class="text-fg-faint text-xs truncate">{t.flag} {t.name}</span>{/if}
-              {#if s.owner}
-                <span class="ml-auto w-1.5 h-1.5 rounded-full shrink-0" style:background-color={s.owner.color} title={s.owner.name} aria-hidden="true"></span>
+              <!-- Key events, home side left / away side right -->
+              {#if events.length}
+                <div class="mt-2.5 pt-2.5 border-t border-line/60 space-y-1">
+                  {#each events as ev (`${ev.minute}-${ev.player}-${ev.type}`)}
+                    {@const onHome = ev.team === m.home}
+                    <div class="flex items-center gap-2 text-xs {onHome ? '' : 'flex-row-reverse'}">
+                      <span class="w-8 shrink-0 text-fg-faint tnum type-display {onHome ? 'text-right' : 'text-left'}">{ev.minute}'</span>
+                      <span class="w-5 flex justify-center shrink-0">
+                        {#if ev.type === 'goal'}<span aria-label="Goal">⚽</span>
+                        {:else if ev.type === 'yellow'}<span class="inline-block w-2 h-3 rounded-[2px] bg-[#fbbf24]" role="img" aria-label="Yellow card"></span>
+                        {:else if ev.type === 'red'}<span class="inline-block w-2 h-3 rounded-[2px] bg-[#ef4444]" role="img" aria-label="Red card"></span>
+                        {/if}
+                      </span>
+                      <span class="truncate {onHome ? '' : 'text-right'}">
+                        <span class="font-medium">{ev.player ?? 'Unknown'}</span>
+                      </span>
+                    </div>
+                  {/each}
+                </div>
               {/if}
-            </div>
-          {/each}
-        </div>
-      </section>
-    {/if}
-
-    {#if recap.cards.length}
-      <section class="mb-5">
-        <h3 class="type-kicker text-gold/90 kicker-slash mb-3">
-          Cards <span class="text-fg-faint font-normal">({recap.cards.length})</span>
-        </h3>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-          {#each recap.cards as ev, i (i)}
-            {@const t = TEAMS[ev.team] ? teamFor(ev.team) : null}
-            <div class="card-raised px-3 py-2 flex items-center gap-2.5 text-sm">
-              <span
-                class="inline-block w-2.5 h-3.5 rounded-[2px] shrink-0 {ev.type === 'red' ? 'bg-[#ef4444]' : 'bg-[#fbbf24]'}"
-                role="img"
-                aria-label={ev.type === 'red' ? 'Red card' : 'Yellow card'}
-              ></span>
-              <span class="font-semibold truncate">{ev.player ?? 'Unknown player'}</span>
-              {#if t}<span class="text-fg-faint text-xs truncate">{t.flag} {t.name}</span>{/if}
-              {#if ev.minute != null}<span class="text-fg-faint text-xs tnum shrink-0">{ev.minute}′</span>{/if}
-              {#if ev.owner}
-                <span class="ml-auto w-1.5 h-1.5 rounded-full shrink-0" style:background-color={ev.owner.color} title={ev.owner.name} aria-hidden="true"></span>
-              {/if}
-            </div>
-          {/each}
-        </div>
-      </section>
-    {/if}
+            </button>
+          {/if}
+        {/each}
+      </div>
+    </section>
 
     {#if recap.movements.length}
       <section class="mb-5">
