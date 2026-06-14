@@ -45,7 +45,8 @@ export function overallLeaderboard(state, employees) {
       const pts = rows.reduce((s, r) => s + (r.pts ?? 0), 0);
       const gd = rows.reduce((s, r) => s + (r.gd ?? 0), 0);
       const gf = rows.reduce((s, r) => s + (r.gf ?? 0), 0);
-      return { employee: emp, pts, gd, gf };
+      const gp = rows.reduce((s, r) => s + (r.p ?? 0), 0);
+      return { employee: emp, pts, gd, gf, gp };
     })
     .sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
 }

@@ -92,6 +92,7 @@
             <th class="font-[650] py-2 pl-3 w-8" scope="col">#</th>
             {#if category === 'overall'}
               <th class="font-[650] py-2" scope="col">Player</th>
+              <th class="font-[650] py-2 text-right w-12" scope="col" title="Games played">GP</th>
               <th class="font-[650] py-2 text-right w-12" scope="col">Pts</th>
               <th class="font-[650] py-2 text-right w-12" scope="col">GD</th>
               <th class="font-[650] py-2 text-right w-12" scope="col">GF</th>
@@ -130,6 +131,7 @@
                   <span class="absolute left-0 top-0 bottom-0 w-1" style:background-color={r.employee.color} aria-hidden="true"></span>
                   <button type="button" class="font-semibold text-[13px] pl-3 text-left" onclick={() => (selected = r.employee.id)}>{r.employee.name}</button>
                 </td>
+                <td class="text-right tnum type-cond text-fg-mute">{r.gp}</td>
                 <td class="text-right tnum type-display text-sm">{r.pts}</td>
                 <td class="text-right tnum type-cond text-fg-mute">{r.gd >= 0 ? '+' : ''}{r.gd}</td>
                 <td class="text-right tnum type-cond text-fg-mute">{r.gf}</td>
