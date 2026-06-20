@@ -21,6 +21,23 @@ import {
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
+/**
+ * Evergreen England jabs — true regardless of the score, the fixture, or the
+ * laws of physics. Added to every England rotation so the slagging never runs dry.
+ */
+const ENGLAND_EVERGREEN = [
+  'Harry Kane is overrated — a trophy cabinet emptier than an English pub at closing',
+  "Three Lions on the shirt, zero on the mantelpiece since '66",
+  'England fans already booking flights to the final they will not reach',
+  'The Premier League is the best in the world, the national team is not — funny that',
+  "Gareth's heirs still can't take a penalty to save their lives, or the nation's",
+  'England: peaked in 1966 and never let anyone forget it',
+  'A golden generation every four years, a quarter-final exit every four years',
+  'Jude Bellingham carrying ten lads who think the hard work is the celebration',
+  'It is statistically more likely to rain in Manchester than for England to win a shootout',
+  'The only thing coming home is the squad, early, again',
+];
+
 function allMatches(state) {
   return [...(state.fixtures ?? []), ...(state.knockoutMatches ?? [])];
 }
@@ -72,6 +89,9 @@ export function englandLines(state, employees) {
 
   // Always-on classic, so the rotation never goes an England-free cycle.
   lines.push(`Sixty years of hurt and counting — it's not coming home`);
+  // Plus a rotating evergreen jab, kept fresh by the day of the tournament.
+  const pick = ENGLAND_EVERGREEN[new Date().getDate() % ENGLAND_EVERGREEN.length];
+  lines.push(pick);
   return lines;
 }
 
