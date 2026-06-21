@@ -11,9 +11,11 @@
     pointsTimeline,
     goalTimeline,
     teamResults,
+    positionRace,
   } from '../../lib/state/prizes.js';
   import Modal from '../Modal.svelte';
   import OwnerBadge from '../OwnerBadge.svelte';
+  import PositionChart from '../PositionChart.svelte';
 
   let { category } = $props();
 
@@ -49,6 +51,12 @@
   const cards = $derived(category === 'cards' ? mostCardsLeaderboard(state, employees) : []);
   const worst = $derived(category === 'worst' ? worstTeamRanking(state, employees) : []);
   const boot = $derived(category === 'boot' ? goldenBootTable(state, employees) : []);
+
+  // Animated "position over time" race for the standings view of this category.
+  const race = $derived(positionRace(category, state, employees));
+  const raceNoun = $derived(
+    category === 'worst' ? 'team' : category === 'boot' ? 'scorer' : 'player',
+  );
 
   // Drill-down selection. null shows the ranking table; otherwise an employee
   // id (overall/cards), a fifaCode (worst) or `player|team` (boot).
@@ -223,6 +231,29 @@
     <p class="mt-3 text-xs text-fg-faint">
       {category === 'worst' ? 'Click a team to see how it got there.' : 'Click a row to see where the points came from.'}
     </p>
+
+    <!-- Position-over-time race: replays how each line's table position moved
+         after every game, in the players' own colours. -->
+    <section class="mt-6">
+      <div class="flex items-baseline justify-between mb-2">
+        <h3 class="type-kicker text-fg-mute kicker-slash">Position over time</h3>
+        <span class="type-kicker text-fg-faint">after every game</span>
+      </div>
+      {#if race.gameCount > 0}
+        <div class="card p-3 sm:p-4">
+          <PositionChart frames={race.frames} lines={race.lines} rankCount={race.rankCount} accent={meta.accent} />
+        </div>
+        {#if category === 'worst' || category === 'boot'}
+          <p class="mt-2 text-xs text-fg-faint">
+            Showing the top {race.lines.length} in the {raceNoun} race, coloured by their owner.
+          </p>
+        {/if}
+      {:else}
+        <div class="card p-6 text-center text-fg-faint text-sm">
+          The race chart appears once games start counting{category === 'cards' ? ' cards' : category === 'boot' ? ' goals' : ''}.
+        </div>
+      {/if}
+    </section>
   {:else if category === 'cards'}
     {@const emp = employees.find((e) => e.id === selected)}
     {@const row = cards.find((r) => r.employee.id === selected)}
