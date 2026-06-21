@@ -5,6 +5,7 @@
  * Worst-team tie-break rule (confirmed): earliest exit → fewest pts → worst GD → fewest goals scored.
  * At group stage with everyone still alive, the rule degenerates to: fewest pts → worst GD → fewest GF.
  */
+import { teamFor } from '../data/teams.js';
 
 /**
  * Has anything actually happened yet? Used by Header to switch off the prize
@@ -206,6 +207,260 @@ export function teamResults(state, fifaCode) {
         round: match.round ?? null,
       };
     });
+}
+
+// ── Position-over-time race (animated bump chart) ─────────────────────────────
+// Reconstructs each leaderboard game-by-game so a chart can replay how every
+// player's table position moved as the tournament unfolded. Pure + deterministic:
+// replays completed matches in kickoff order, recomputing the ranking after each
+// game that actually shifted a tracked line.
+//
+// Output shape (consumed by PositionChart.svelte):
+//   {
+//     category,
+//     frames:  [{ key, label }],          // x-axis, one entry per game that moved the table
+//     lines:   [{ id, label, flag?, color, ranks: number[] }],  // ranks aligned to frames, 1 = top
+//     rankCount,                          // how many lines are ranked (y-axis scale)
+//     gameCount,                          // frames.length — 0 means "nothing to chart yet"
+//   }
+
+// Neutral grey for ranked entities nobody in the sweepstake owns (rare — every
+// group team is picked, but knockout scorers can slip through).
+const RACE_NEUTRAL = '#64748b';
+// Cap lines on the team/player races so the chart stays legible. The two
+// employee races (overall, cards) always show all 8 and ignore this.
+const RACE_MAX_LINES = 8;
+
+function raceDayLabel(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('en-IE', {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'Europe/Dublin',
+  });
+}
+
+// Completed matches with a usable score, oldest first (id breaks utc ties).
+function completedInOrder(matches) {
+  return matches
+    .filter((m) => m.status === 'final' && m.homeGoals != null && m.awayGoals != null)
+    .sort(
+      (a, b) =>
+        new Date(a.utc) - new Date(b.utc) || String(a.id ?? '').localeCompare(String(b.id ?? '')),
+    );
+}
+
+function addGroupResult(totals, code, gf, ga) {
+  const t = (totals[code] ??= { pts: 0, gd: 0, gf: 0 });
+  t.gf += gf;
+  t.gd += gf - ga;
+  t.pts += gf > ga ? 3 : gf === ga ? 1 : 0;
+}
+
+// 1-based ranks for `entries` ordered by `cmp`. Stable, so ties keep input order
+// and never collapse two lines onto the same row.
+function ranksByOrder(entries, cmp) {
+  const order = [...entries].sort(cmp);
+  const out = new Map();
+  order.forEach((e, i) => out.set(e.id, i + 1));
+  return out;
+}
+
+// The reconstructed timeline sums per-game scores, while the live leaderboards
+// read the official standings snapshot — the two can drift mid-tournament (and
+// in the hand-authored mocks). Land the chart's final point exactly on the table
+// the user is looking at by appending an authoritative "Now" frame, but only when
+// it would actually move something (so live, fully-synced data shows no extra tick).
+function appendAuthoritativeFrame(frames, ranksById, ids, orderedIds) {
+  if (!frames.length) return;
+  const rank = new Map();
+  orderedIds.filter((id) => ranksById.has(id)).forEach((id, i) => rank.set(id, i + 1));
+  const last = frames.length - 1;
+  const differs = ids.some((id) => {
+    const r = rank.get(id);
+    return r != null && r !== ranksById.get(id)[last];
+  });
+  if (!differs) return;
+  frames.push({ key: 'now', label: 'Now' });
+  for (const id of ids) {
+    const arr = ranksById.get(id);
+    arr.push(rank.get(id) ?? arr[last]);
+  }
+}
+
+function finalizeRace(category, frames, lines, ranksById, rankCount) {
+  return {
+    category,
+    frames,
+    lines: lines.map((l) => ({ ...l, ranks: ranksById.get(l.id) ?? [] })),
+    rankCount,
+    gameCount: frames.length,
+  };
+}
+
+function emptyRace(category) {
+  return { category, frames: [], lines: [], rankCount: 0, gameCount: 0 };
+}
+
+// Overall race — one line per employee, summed group points across their teams.
+function overallRace(state, employees) {
+  const owned = employees.map((e) => ({ id: e.id, codes: e.teams.map((t) => t.fifaCode) }));
+  const ids = employees.map((e) => e.id);
+  const totals = {};
+  const ranksById = new Map(ids.map((id) => [id, []]));
+  const frames = [];
+
+  for (const m of completedInOrder(state.fixtures ?? [])) {
+    addGroupResult(totals, m.home, m.homeGoals, m.awayGoals);
+    addGroupResult(totals, m.away, m.awayGoals, m.homeGoals);
+    const metrics = owned.map(({ id, codes }) => {
+      let pts = 0,
+        gd = 0,
+        gf = 0;
+      for (const c of codes) {
+        const t = totals[c];
+        if (t) {
+          pts += t.pts;
+          gd += t.gd;
+          gf += t.gf;
+        }
+      }
+      return { id, pts, gd, gf };
+    });
+    const rank = ranksByOrder(metrics, (a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+    frames.push({ key: m.id, label: raceDayLabel(m.utc) });
+    for (const id of ids) ranksById.get(id).push(rank.get(id));
+  }
+
+  appendAuthoritativeFrame(
+    frames,
+    ranksById,
+    ids,
+    overallLeaderboard(state, employees).map((r) => r.employee.id),
+  );
+  const lines = employees.map((e) => ({ id: e.id, label: e.name, color: e.color }));
+  return finalizeRace('overall', frames, lines, ranksById, employees.length);
+}
+
+// Cards race — one line per employee, summed card points (🟨 1 · 🟥 2). Only games
+// that actually showed a card to a tracked team produce a frame.
+function cardsRace(state, employees) {
+  const ownerByCode = {};
+  for (const e of employees) for (const t of e.teams) ownerByCode[t.fifaCode] = e.id;
+  const ids = employees.map((e) => e.id);
+  const points = Object.fromEntries(ids.map((id) => [id, 0]));
+  const ranksById = new Map(ids.map((id) => [id, []]));
+  const frames = [];
+
+  for (const m of completedInOrder([...(state.fixtures ?? []), ...(state.knockoutMatches ?? [])])) {
+    let changed = false;
+    for (const ev of m.events ?? []) {
+      if (ev.type !== 'yellow' && ev.type !== 'red') continue;
+      const owner = ownerByCode[ev.team];
+      if (owner == null) continue;
+      points[owner] += ev.type === 'red' ? 2 : 1;
+      changed = true;
+    }
+    if (!changed) continue;
+    const rank = ranksByOrder(
+      ids.map((id) => ({ id, v: points[id] })),
+      (a, b) => b.v - a.v,
+    );
+    frames.push({ key: m.id, label: raceDayLabel(m.utc) });
+    for (const id of ids) ranksById.get(id).push(rank.get(id));
+  }
+
+  appendAuthoritativeFrame(
+    frames,
+    ranksById,
+    ids,
+    mostCardsLeaderboard(state, employees).map((r) => r.employee.id),
+  );
+  const lines = employees.map((e) => ({ id: e.id, label: e.name, color: e.color }));
+  return finalizeRace('cards', frames, lines, ranksById, employees.length);
+}
+
+// Worst-team race — the current spoon contenders raced among themselves on group
+// points (rank 1 = worst, matching the table). Coloured by owning employee.
+function worstRace(state, employees, maxLines) {
+  const tracked = worstTeamRanking(state, employees).slice(0, maxLines);
+  if (!tracked.length) return emptyRace('worst');
+  const ids = tracked.map((r) => r.row.fifaCode);
+  const idSet = new Set(ids);
+  const totals = {};
+  const ranksById = new Map(ids.map((id) => [id, []]));
+  const frames = [];
+
+  for (const m of completedInOrder(state.fixtures ?? [])) {
+    const touches = idSet.has(m.home) || idSet.has(m.away);
+    if (idSet.has(m.home)) addGroupResult(totals, m.home, m.homeGoals, m.awayGoals);
+    if (idSet.has(m.away)) addGroupResult(totals, m.away, m.awayGoals, m.homeGoals);
+    if (!touches) continue;
+    const rank = ranksByOrder(
+      ids.map((id) => ({ id, ...(totals[id] ?? { pts: 0, gd: 0, gf: 0 }) })),
+      (a, b) => a.pts - b.pts || a.gd - b.gd || a.gf - b.gf,
+    );
+    frames.push({ key: m.id, label: raceDayLabel(m.utc) });
+    for (const id of ids) ranksById.get(id).push(rank.get(id));
+  }
+
+  // `ids` is already in worstTeamRanking order, so it is the authoritative order.
+  appendAuthoritativeFrame(frames, ranksById, ids, ids);
+  const lines = tracked.map((r) => {
+    const t = teamFor(r.row.fifaCode);
+    return { id: r.row.fifaCode, label: t.name, flag: t.flag, color: r.owner?.color ?? RACE_NEUTRAL };
+  });
+  return finalizeRace('worst', frames, lines, ranksById, tracked.length);
+}
+
+// Golden-boot race — the current top scorers raced on cumulative goals (rank 1 =
+// most). Coloured by the owner of the scorer's team.
+function bootRace(state, employees, maxLines) {
+  const tracked = goldenBootTable(state, employees).slice(0, maxLines);
+  if (!tracked.length) return emptyRace('boot');
+  const ids = tracked.map((r) => `${r.player}|${r.team}`);
+  const idSet = new Set(ids);
+  const goals = Object.fromEntries(ids.map((id) => [id, 0]));
+  const ranksById = new Map(ids.map((id) => [id, []]));
+  const frames = [];
+
+  for (const m of completedInOrder([...(state.fixtures ?? []), ...(state.knockoutMatches ?? [])])) {
+    let changed = false;
+    for (const ev of m.events ?? []) {
+      if (ev.type !== 'goal' || !ev.player) continue;
+      const id = `${ev.player}|${ev.team}`;
+      if (!idSet.has(id)) continue;
+      goals[id] += 1;
+      changed = true;
+    }
+    if (!changed) continue;
+    const rank = ranksByOrder(
+      ids.map((id) => ({ id, v: goals[id] })),
+      (a, b) => b.v - a.v,
+    );
+    frames.push({ key: m.id, label: raceDayLabel(m.utc) });
+    for (const id of ids) ranksById.get(id).push(rank.get(id));
+  }
+
+  // `ids` follows goldenBootTable order, so it is the authoritative order.
+  appendAuthoritativeFrame(frames, ranksById, ids, ids);
+  const lines = tracked.map((r) => {
+    const t = teamFor(r.team);
+    return { id: `${r.player}|${r.team}`, label: r.player, flag: t.flag, color: r.owner?.color ?? RACE_NEUTRAL };
+  });
+  return finalizeRace('boot', frames, lines, ranksById, tracked.length);
+}
+
+/**
+ * Build the position-over-time race for one leaderboard category.
+ * @param {'overall'|'cards'|'worst'|'boot'} category
+ */
+export function positionRace(category, state, employees, { maxLines = RACE_MAX_LINES } = {}) {
+  if (category === 'overall') return overallRace(state, employees);
+  if (category === 'cards') return cardsRace(state, employees);
+  if (category === 'worst') return worstRace(state, employees, maxLines);
+  if (category === 'boot') return bootRace(state, employees, maxLines);
+  return emptyRace(category);
 }
 
 export function tournamentWinner(state, employees) {
