@@ -22,6 +22,10 @@
   const isScheduled = $derived(match.status === 'scheduled');
   const homeWon = $derived(isFinal && match.homeGoals > match.awayGoals);
   const awayWon = $derived(isFinal && match.awayGoals > match.homeGoals);
+  // A team is knocked out when it loses a decided knockout tie (clear on goals;
+  // penalty shootouts come through level, so we can't flag a loser there).
+  const homeLost = $derived(awayWon);
+  const awayLost = $derived(homeWon);
 
   // Game modal only opens when ESPN is reachable AND we have a real ESPN id
   const gameClickable = $derived(
@@ -58,8 +62,8 @@
     ></button>
     {#if homeTeam}
       <button type="button" class="ml-1.5 flex items-center gap-1.5 pressable disabled:cursor-default" onclick={(e) => openTeam(match.home, e)} disabled={!store.espnReachable}>
-        <span class="text-sm leading-none" aria-hidden="true">{homeTeam.flag}</span>
-        <span class="text-[11px] type-cond font-bold tracking-wide {homeWon ? 'text-volt' : 'text-fg-mute'}">{match.home}</span>
+        <span class="text-sm leading-none {homeLost ? 'opacity-40' : ''}" aria-hidden="true">{homeTeam.flag}</span>
+        <span class="text-[11px] type-cond font-bold tracking-wide {homeWon ? 'text-volt' : homeLost ? 'text-fg-faint line-through' : 'text-fg-mute'}">{match.home}</span>
       </button>
       <button type="button" class="ml-auto text-xs type-display tnum px-1.5 {homeWon ? 'text-volt' : 'text-fg-mute'} hover:bg-ink-4 rounded disabled:hover:bg-transparent disabled:cursor-default" onclick={openGame} disabled={!gameClickable}>
         {#if isScheduled}
@@ -95,8 +99,8 @@
     ></button>
     {#if awayTeam}
       <button type="button" class="ml-1.5 flex items-center gap-1.5 pressable disabled:cursor-default" onclick={(e) => openTeam(match.away, e)} disabled={!store.espnReachable}>
-        <span class="text-sm leading-none" aria-hidden="true">{awayTeam.flag}</span>
-        <span class="text-[11px] type-cond font-bold tracking-wide {awayWon ? 'text-volt' : 'text-fg-mute'}">{match.away}</span>
+        <span class="text-sm leading-none {awayLost ? 'opacity-40' : ''}" aria-hidden="true">{awayTeam.flag}</span>
+        <span class="text-[11px] type-cond font-bold tracking-wide {awayWon ? 'text-volt' : awayLost ? 'text-fg-faint line-through' : 'text-fg-mute'}">{match.away}</span>
       </button>
       <button type="button" class="ml-auto text-xs type-display tnum px-1.5 {awayWon ? 'text-volt' : 'text-fg-mute'} hover:bg-ink-4 rounded disabled:hover:bg-transparent disabled:cursor-default" onclick={openGame} disabled={!gameClickable}>
         {#if match.awayGoals != null}
