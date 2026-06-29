@@ -385,27 +385,53 @@ function mergeGroupStats(baseline, espn) {
   }));
 }
 
+// Knockout fixtures occupy fixed kickoff slots in the published schedule long
+// before the teams are known, so (round, kickoff-instant) is a stable join key
+// across both data sources. `slot` is NOT a valid key: it's just each source's
+// array position, and the two sources order their knockout arrays differently —
+// openfootball by FIFA match number, ESPN's scoreboard by kickoff time — and
+// the match-number order isn't even chronological (e.g. match 76 kicks off
+// before match 74). Joining on slot therefore paired unrelated matches and
+// dropped ESPN's scores/ids/events onto the wrong bracket cells (a future
+// fixture showed a played game's score; opening it loaded a different game's
+// report).
+function knockoutKey(m) {
+  if (!m?.round || !m.utc) return null;
+  const t = new Date(m.utc).getTime();
+  return Number.isFinite(t) ? `${m.round}|${Math.round(t / 60000)}` : null;
+}
+
 function mergeKnockouts(baseline, espn, { acceptTeams = true } = {}) {
-  // Match by (round, slot). Pre-knockout-phase (`acceptTeams: false`) keeps
-  // baseline placeholders even when ESPN supplies real codes — ESPN sometimes
-  // publishes tentative R32 matchups for host seeds before the group stage
-  // resolves. After the last group match has kicked off we trust ESPN.
+  // Pre-knockout-phase (`acceptTeams: false`) keeps baseline placeholders even
+  // when ESPN supplies real codes — ESPN sometimes publishes tentative R32
+  // matchups for host seeds before the group stage resolves. After the last
+  // group match has kicked off we trust ESPN.
   const byKey = new Map();
-  for (const b of baseline) byKey.set(`${b.round}|${b.slot}`, b);
+  for (const b of baseline) {
+    const k = knockoutKey(b);
+    if (k) byKey.set(k, b);
+  }
   const out = [...baseline];
   for (const e of espn) {
-    const k = `${e.round}|${e.slot}`;
-    const existing = byKey.get(k);
+    const existing = byKey.get(knockoutKey(e));
     if (existing) {
       const espnHasRealTeams = isRealCode(e.home) && isRealCode(e.away);
       const baselineIsPlaceholder = !isRealCode(existing.home) || !isRealCode(existing.away);
+      // Always keep the baseline's round + slot so the bracket retains its
+      // fixed top-to-bottom ordering; only live fields (id, scores, status,
+      // minute, events) — plus the teams once the gate is open — come from ESPN.
       if (baselineIsPlaceholder && espnHasRealTeams && acceptTeams) {
         // accept ESPN's resolved teams + everything else
-        Object.assign(existing, e);
+        Object.assign(existing, e, { round: existing.round, slot: existing.slot });
       } else {
         // either gate is closed, or baseline already had real teams. Either
         // way, keep baseline's home/away and just take ESPN's scores/status/etc.
-        Object.assign(existing, e, { home: existing.home, away: existing.away });
+        Object.assign(existing, e, {
+          round: existing.round,
+          slot: existing.slot,
+          home: existing.home,
+          away: existing.away,
+        });
       }
     } else if (acceptTeams || !isRealCode(e.home)) {
       // new entry — only append if either we're past the gate, or this entry
