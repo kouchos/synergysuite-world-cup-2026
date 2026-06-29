@@ -112,13 +112,31 @@ function toUtc(date, time) {
   return new Date(`${date}T12:00:00Z`).toISOString();
 }
 
-let knockoutSlotCounters;
-function resetSlotCounters() {
-  knockoutSlotCounters = { R32: 0, R16: 0, QF: 0, SF: 0, Third: 0, Final: 0 };
-}
-function nextSlot(round) {
-  knockoutSlotCounters[round] = (knockoutSlotCounters[round] ?? 0) + 1;
-  return knockoutSlotCounters[round];
+// Fixed FIFA World Cup 2026 knockout bracket layout: the top-to-bottom order of
+// matches within each round so the Bracket component renders a real tree — every
+// match sits directly between the two matches that feed it. We pin it here by
+// FIFA match number rather than derive it from openfootball's "W74"/"W77" feeder
+// references because that structure isn't sequential (R16 match 89 is fed by
+// matches 74 & 77, not 73 & 74) AND openfootball rewrites a feeder reference to
+// a team name the moment that match is decided, which would corrupt any
+// derivation as the tournament progresses. The match numbers (73–104) are the
+// stable FIFA identifiers and never change.
+const BRACKET_ORDER = {
+  R32: [74, 77, 73, 75, 83, 84, 81, 82, 76, 78, 79, 80, 86, 88, 85, 87],
+  R16: [89, 90, 93, 94, 91, 92, 95, 96],
+  QF: [97, 98, 99, 100],
+  SF: [101, 102],
+  Third: [103],
+  Final: [104],
+};
+
+// Display slot for a knockout match: its index in the bracket layout above. Any
+// match whose number we don't recognise falls after the known ones (in feed
+// order) so it still renders rather than colliding on slot 0.
+function bracketSlot(round, num, fallbackIndex) {
+  const order = BRACKET_ORDER[round] ?? [];
+  const idx = num != null ? order.indexOf(Number(num)) : -1;
+  return idx >= 0 ? idx + 1 : order.length + fallbackIndex + 1;
 }
 
 export async function fetchOpenFootball() {
@@ -136,7 +154,7 @@ export async function fetchOpenFootball() {
   const fixtures = [];
   const knockoutMatches = [];
   const teamsByGroup = new Map();
-  resetSlotCounters();
+  let knockoutFallback = 0;
 
   for (const m of value.matches ?? []) {
     const { stage, round } = normaliseRound(m.round);
@@ -168,7 +186,13 @@ export async function fetchOpenFootball() {
         if (!teamsByGroup.has(`${group}:${away}`)) teamsByGroup.set(`${group}:${away}`, { group, fifaCode: away });
       }
     } else {
-      knockoutMatches.push({ ...base, stage: 'knockout', round, slot: nextSlot(round) });
+      knockoutMatches.push({
+        ...base,
+        stage: 'knockout',
+        round,
+        num: m.num ?? null,
+        slot: bracketSlot(round, m.num, knockoutFallback++),
+      });
     }
   }
 
