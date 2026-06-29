@@ -52,16 +52,29 @@ function teamCodeFromCompetitor(c) {
   return c?.team?.abbreviation?.toUpperCase() ?? null;
 }
 
+// Classify an ESPN scoring/disciplinary play (by its `type.text`) into our event
+// kinds. Cards are detected via the word "card" so that a naive substring check
+// can't misfire — notably `includes('red')` matched "Penalty - Sco**red**" and
+// turned penalty goals into red cards (a player "sent off" who then "scored").
+function classifyEvent(rawText) {
+  const text = (rawText ?? '').toLowerCase();
+  if (text.includes('card')) {
+    // A second yellow ("Yellow Red Card") is a sending-off, so red wins.
+    if (text.includes('red')) return 'red';
+    if (text.includes('yellow')) return 'yellow';
+    return null;
+  }
+  // A penalty only counts as a goal when it was actually scored.
+  if (text.includes('saved') || text.includes('missed') || text.includes('disallow')) return null;
+  if (text.includes('goal') || text.includes('scored')) return 'goal';
+  return null;
+}
+
 function eventsFromDetails(competition) {
   const out = [];
-  // ESPN puts scoring plays in `details` and cards too in some payloads. Both
-  // shapes seen in the wild — type.text or type.id.
+  // ESPN puts scoring plays in `details` and cards too in some payloads.
   for (const d of competition?.details ?? []) {
-    const text = (d?.type?.text ?? '').toLowerCase();
-    let kind = null;
-    if (text.includes('goal') && !text.includes('saved')) kind = 'goal';
-    else if (text.includes('yellow')) kind = 'yellow';
-    else if (text.includes('red')) kind = 'red';
+    const kind = classifyEvent(d?.type?.text);
     if (!kind) continue;
     const teamId = d?.team?.id;
     const team = competition.competitors?.find((c) => c.team?.id === teamId);
@@ -78,11 +91,7 @@ function eventsFromDetails(competition) {
 function eventsFromSummary(summary, abbrByTeamId) {
   const out = [];
   for (const e of summary?.keyEvents ?? []) {
-    const text = (e?.type?.text ?? '').toLowerCase();
-    let kind = null;
-    if (text.includes('goal') && !text.includes('saved')) kind = 'goal';
-    else if (text.includes('yellow')) kind = 'yellow';
-    else if (text.includes('red')) kind = 'red';
+    const kind = classifyEvent(e?.type?.text);
     if (!kind) continue;
     out.push({
       type: kind,
