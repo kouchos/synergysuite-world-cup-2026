@@ -385,20 +385,30 @@ function mergeGroupStats(baseline, espn) {
   }));
 }
 
-// Knockout fixtures occupy fixed kickoff slots in the published schedule long
-// before the teams are known, so (round, kickoff-instant) is a stable join key
-// across both data sources. `slot` is NOT a valid key: it's just each source's
-// array position, and the two sources order their knockout arrays differently —
-// openfootball by FIFA match number, ESPN's scoreboard by kickoff time — and
-// the match-number order isn't even chronological (e.g. match 76 kicks off
-// before match 74). Joining on slot therefore paired unrelated matches and
-// dropped ESPN's scores/ids/events onto the wrong bracket cells (a future
-// fixture showed a played game's score; opening it loaded a different game's
-// report).
-function knockoutKey(m) {
-  if (!m?.round || !m.utc) return null;
-  const t = new Date(m.utc).getTime();
-  return Number.isFinite(t) ? `${m.round}|${Math.round(t / 60000)}` : null;
+// Rank each knockout match within its round by kickoff time. This is the join
+// key between the two feeds, NOT `slot` (each feed's array position) or the raw
+// timestamp. The two sources order their arrays differently — openfootball by
+// FIFA match number, which isn't even chronological (match 76 kicks off before
+// match 74), and ESPN's scoreboard by kickoff time — so a positional join paired
+// unrelated matches and dropped ESPN's scores/ids onto the wrong cells. Raw
+// timestamps don't work either: the feeds publish the same fixture minutes
+// apart, so an exact-time join misses and the unmatched ESPN event gets appended
+// as a duplicate. The chronological *rank* within a round is stable across both
+// feeds (the schedule order is fixed), so rank-for-rank pairing lines them up.
+function rankByRound(matches) {
+  const byRound = new Map();
+  for (const m of matches ?? []) {
+    if (!byRound.has(m.round)) byRound.set(m.round, []);
+    byRound.get(m.round).push(m);
+  }
+  const rank = new Map();
+  for (const list of byRound.values()) {
+    list
+      .slice()
+      .sort((a, b) => new Date(a.utc ?? 0).getTime() - new Date(b.utc ?? 0).getTime())
+      .forEach((m, i) => rank.set(m, i));
+  }
+  return rank;
 }
 
 function mergeKnockouts(baseline, espn, { acceptTeams = true } = {}) {
@@ -406,20 +416,24 @@ function mergeKnockouts(baseline, espn, { acceptTeams = true } = {}) {
   // when ESPN supplies real codes — ESPN sometimes publishes tentative R32
   // matchups for host seeds before the group stage resolves. After the last
   // group match has kicked off we trust ESPN.
+  const baseRank = rankByRound(baseline);
   const byKey = new Map();
+  const baselineRoundCounts = {};
   for (const b of baseline) {
-    const k = knockoutKey(b);
-    if (k) byKey.set(k, b);
+    byKey.set(`${b.round}|${baseRank.get(b)}`, b);
+    baselineRoundCounts[b.round] = (baselineRoundCounts[b.round] ?? 0) + 1;
   }
+  const espnRank = rankByRound(espn);
   const out = [...baseline];
   for (const e of espn) {
-    const existing = byKey.get(knockoutKey(e));
+    const existing = byKey.get(`${e.round}|${espnRank.get(e)}`);
     if (existing) {
       const espnHasRealTeams = isRealCode(e.home) && isRealCode(e.away);
       const baselineIsPlaceholder = !isRealCode(existing.home) || !isRealCode(existing.away);
       // Always keep the baseline's round + slot so the bracket retains its
       // fixed top-to-bottom ordering; only live fields (id, scores, status,
-      // minute, events) — plus the teams once the gate is open — come from ESPN.
+      // minute, events) — plus the teams once a placeholder resolves — come
+      // from ESPN.
       if (baselineIsPlaceholder && espnHasRealTeams && acceptTeams) {
         // accept ESPN's resolved teams + everything else
         Object.assign(existing, e, { round: existing.round, slot: existing.slot });
@@ -433,9 +447,12 @@ function mergeKnockouts(baseline, espn, { acceptTeams = true } = {}) {
           away: existing.away,
         });
       }
-    } else if (acceptTeams || !isRealCode(e.home)) {
-      // new entry — only append if either we're past the gate, or this entry
-      // has placeholder teams (in which case it's just structural)
+    } else if (!baselineRoundCounts[e.round] && (acceptTeams || !isRealCode(e.home))) {
+      // Only append when the baseline has no structure for this round at all
+      // (e.g. openfootball is unreachable). Otherwise an ESPN event that didn't
+      // rank-match a baseline cell is an extra — often a later-round fixture
+      // mis-tagged into R32 by the round detector — and appending it would
+      // duplicate the bracket. Drop it.
       out.push(e);
     }
   }
