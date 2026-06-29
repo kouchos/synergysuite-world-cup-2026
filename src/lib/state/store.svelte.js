@@ -34,6 +34,14 @@ function initialSnapshot(mode) {
 // per-endpoint internally, so calling refresh more often than TTL is cheap.
 const TICK_MS = 30 * 1000;
 
+// A goal flash is only "live" if the snapshot we're diffing against is recent.
+// During play we poll every 60s, so consecutive snapshots are ~a minute apart.
+// When the app is resumed after being backgrounded (PWA/tab suspend) or after a
+// long idle gap, the in-memory snapshot can be hours old — diffing it would
+// flash every goal scored in the meantime as if it just happened. Beyond this
+// window we silently rebaseline instead of celebrating.
+const MAX_CELEBRATION_GAP_MS = 2 * 60 * 1000;
+
 function detectActivity(state) {
   if (!state) return 'idle';
   const live =
@@ -84,7 +92,13 @@ function createStore() {
     syncing = true;
     try {
       const next = await fetchLiveState({ live: activity === 'live' });
-      if (hadLiveSnapshot) celebrations.fromSnapshots(snapshot, next, employees);
+      // Only celebrate goals when diffing against a recent snapshot — see
+      // MAX_CELEBRATION_GAP_MS. A stale baseline (resume after suspend / long
+      // idle) would flash old goals as if they just occurred.
+      const snapshotAge = lastSync ? Date.now() - lastSync.getTime() : Infinity;
+      if (hadLiveSnapshot && snapshotAge <= MAX_CELEBRATION_GAP_MS) {
+        celebrations.fromSnapshots(snapshot, next, employees);
+      }
       hadLiveSnapshot = true;
       snapshot = next;
       lastSync = new Date();
