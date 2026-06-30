@@ -15,7 +15,7 @@
   const live = $derived((state.fixtures ?? []).filter((f) => f.status === 'live'));
   const upcoming = $derived(
     (state.fixtures ?? [])
-      .filter((f) => f.status === 'scheduled')
+      .filter((f) => f.status === 'scheduled' && new Date(f.utc).getTime() > Date.now())
       .sort((a, b) => new Date(a.utc) - new Date(b.utc))
       .slice(0, 8)
   );

@@ -27,6 +27,7 @@
         (m) =>
           m.status === 'scheduled' &&
           m.utc &&
+          new Date(m.utc).getTime() > now &&
           TEAMS[m.home] &&
           TEAMS[m.away],
       )

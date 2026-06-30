@@ -34,7 +34,14 @@
   const byUtcDesc = (a, b) => new Date(b.utc) - new Date(a.utc);
 
   const live = $derived(allMatches.filter((m) => m.status === 'live').sort(byUtcAsc));
-  const upcoming = $derived(allMatches.filter((m) => m.status === 'scheduled').sort(byUtcAsc));
+  // "Upcoming" means the kickoff is still ahead of us — a scheduled game whose
+  // kickoff has already passed is a stale fixture the feed never resolved (a
+  // played group game we never got a result for), not something coming up.
+  const upcoming = $derived(
+    allMatches
+      .filter((m) => m.status === 'scheduled' && new Date(m.utc).getTime() > Date.now())
+      .sort(byUtcAsc),
+  );
   const results = $derived(allMatches.filter((m) => m.status === 'final').sort(byUtcDesc));
 
   // Bucket a sorted list into consecutive matchdays.
