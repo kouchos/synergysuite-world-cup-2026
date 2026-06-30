@@ -38,6 +38,16 @@
   const isFinal = $derived(match?.status === 'final');
   const isScheduled = $derived(match?.status === 'scheduled');
 
+  // Penalty-shootout result, when the tie went to spot-kicks.
+  const hasShootout = $derived(match?.homeShootout != null && match?.awayShootout != null);
+  const shootoutWinner = $derived(
+    !hasShootout
+      ? null
+      : match.homeShootout > match.awayShootout
+        ? home?.name ?? match.home
+        : away?.name ?? match.away,
+  );
+
   // Fetch the ESPN summary on demand. Cache short for live, longer otherwise.
   let summary = $state(null);
   let summaryLoading = $state(false);
@@ -243,6 +253,9 @@
                   Live · {match.minute}'
                 </span>
               </div>
+            {:else if hasShootout}
+              <div class="mt-1 type-display text-sm text-volt tnum">{match.homeShootout}–{match.awayShootout} on pens</div>
+              <div class="mt-0.5 type-kicker text-fg-faint">{shootoutWinner} win</div>
             {:else}
               <div class="mt-2 type-kicker text-fg-faint">Full time</div>
             {/if}

@@ -21,6 +21,7 @@
   // lose at the same time. (Every team has an owner, so owner-vs-owner
   // matchups are just... every match.)
   const isDerby = $derived(homeOwner && awayOwner && homeOwner.id === awayOwner.id);
+  const hasShootout = $derived(match.homeShootout != null && match.awayShootout != null);
 
   const gameClickable = $derived(
     store.espnReachable && match.id && !String(match.id).startsWith('of-'),
@@ -63,6 +64,8 @@
       {/key}
       {#if match.status === 'live'}
         <div class="mt-0.5 flex justify-center"><LiveDot label={match.minute ? `${match.minute}'` : 'LIVE'} /></div>
+      {:else if hasShootout}
+        <div class="type-kicker text-fg-faint mt-1">{match.homeShootout}–{match.awayShootout} pens</div>
       {:else}
         <div class="type-kicker text-fg-faint mt-1">FT</div>
       {/if}

@@ -76,6 +76,25 @@ test.describe('Mid-tournament mock (?mock=1)', () => {
     await expect(liveCell).toContainText("67'");
   });
 
+  test('penalty-shootout tie shows the shootout score, a winner, and opens its report', async ({ page }) => {
+    await page.getByRole('button', { name: 'Knockout ladder' }).click();
+    const cell = page
+      .locator('.bracket-cell')
+      .filter({ hasText: 'CRO' })
+      .filter({ hasText: 'MEX' })
+      .first();
+    // Regulation level 1–1 with the shootout tally alongside.
+    await expect(cell).toContainText('(2)');
+    await expect(cell).toContainText('(4)');
+    // Croatia lost the shootout → struck through.
+    await expect(cell.locator('span').filter({ hasText: /^CRO$/ })).toHaveClass(/line-through/);
+    // Its report opens and names the shootout result.
+    await cell.getByRole('button', { name: /1/ }).first().click();
+    const report = page.getByRole('dialog');
+    await expect(report).toContainText(/on pens/i);
+    await expect(report).toContainText(/Mexico win/i);
+  });
+
   test('Winners view shows the pre-final placeholder', async ({ page }) => {
     await page.getByRole('button', { name: 'Winners' }).click();
     await expect(page.getByText('Tournament still in progress')).toBeVisible();

@@ -271,7 +271,7 @@ export const MOCK_STATE = {
   knockoutMatches: [
     // ── Round of 32 — all played ───────────────────────────────────────────────
     { id: 'r32-1',  round: 'R32', slot: 1,  utc: '2026-06-29T18:00:00Z', home: 'NED', away: 'IRQ', homeGoals: 3, awayGoals: 0, status: 'final' },
-    { id: 'r32-2',  round: 'R32', slot: 2,  utc: '2026-06-29T20:00:00Z', home: 'CRO', away: 'MEX', homeGoals: 1, awayGoals: 2, status: 'final' },
+    { id: 'r32-2',  round: 'R32', slot: 2,  utc: '2026-06-29T20:00:00Z', home: 'CRO', away: 'MEX', homeGoals: 1, awayGoals: 1, homeShootout: 2, awayShootout: 4, status: 'final' },
     { id: 'r32-3',  round: 'R32', slot: 3,  utc: '2026-06-29T22:00:00Z', home: 'JPN', away: 'ECU', homeGoals: 1, awayGoals: 0, status: 'final' },
     { id: 'r32-4',  round: 'R32', slot: 4,  utc: '2026-06-30T18:00:00Z', home: 'ENG', away: 'BIH', homeGoals: 2, awayGoals: 0, status: 'final' },
     { id: 'r32-5',  round: 'R32', slot: 5,  utc: '2026-06-30T20:00:00Z', home: 'ESP', away: 'UZB', homeGoals: 4, awayGoals: 1, status: 'final' },
