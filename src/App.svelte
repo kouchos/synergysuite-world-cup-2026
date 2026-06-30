@@ -14,6 +14,7 @@
   import ViewTabs from './components/ViewTabs.svelte';
   import Countdown from './components/Countdown.svelte';
   import PoolView from './views/PoolView.svelte';
+  import FixturesView from './views/FixturesView.svelte';
   import KnockoutView from './views/KnockoutView.svelte';
   import WinnersView from './views/WinnersView.svelte';
   import EmployeeModal from './components/modals/EmployeeModal.svelte';
@@ -129,6 +130,10 @@
     {#if store.view === 'group'}
       <div in:fade={{ duration: dur(180) }}>
         <PoolView state={store.state} employees={store.employees} />
+      </div>
+    {:else if store.view === 'fixtures'}
+      <div in:fade={{ duration: dur(180) }}>
+        <FixturesView state={store.state} employees={store.employees} />
       </div>
     {:else if store.view === 'knockout'}
       <div in:fade={{ duration: dur(180) }}>

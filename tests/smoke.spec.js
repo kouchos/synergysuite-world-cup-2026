@@ -81,10 +81,25 @@ test.describe('Mid-tournament mock (?mock=1)', () => {
     await expect(page.getByText('Tournament still in progress')).toBeVisible();
   });
 
+  test('Fixtures view lists upcoming and past games grouped by day', async ({ page }) => {
+    await page.getByRole('button', { name: 'Fixtures', exact: true }).click();
+    // Live tie carries its stage label, plus the Upcoming/Results toggle.
+    await expect(page.getByRole('button', { name: /Upcoming/ })).toBeVisible();
+    const results = page.getByRole('button', { name: /Results/ });
+    await expect(results).toBeVisible();
+    // Upcoming default: a real fixture from both group and knockout stages shows.
+    await expect(page.getByText('Round of 16').first()).toBeVisible();
+    // Flip to results — past games appear with their full-time scores.
+    await results.click();
+    await expect(page.getByText(/^Round of 32$/).first()).toBeVisible();
+  });
+
   test('view tabs transition without errors', async ({ page }) => {
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
 
+    await page.getByRole('button', { name: 'Fixtures', exact: true }).click();
+    await page.waitForTimeout(250);
     await page.getByRole('button', { name: 'Knockout ladder' }).click();
     await page.waitForTimeout(250);
     await page.getByRole('button', { name: 'Winners' }).click();

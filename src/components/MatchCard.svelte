@@ -6,7 +6,7 @@
   import { modal } from '../lib/state/modal.svelte.js';
   import { store } from '../lib/state/store.svelte.js';
 
-  let { match, employees } = $props();
+  let { match, employees, stage = null } = $props();
 
   const home = $derived(teamFor(match.home));
   const away = $derived(teamFor(match.away));
@@ -37,9 +37,13 @@
 </script>
 
 <div
-  class="card lift p-2.5 flex items-center gap-2 {match.status === 'live' ? 'border-live/40' : isDerby ? 'border-gold/30' : ''}"
+  class="card lift p-2.5 {match.status === 'live' ? 'border-live/40' : isDerby ? 'border-gold/30' : ''}"
   title={isDerby ? `Sweepstake derby: ${homeOwner.name} vs ${homeOwner.name} — wins either way` : undefined}
 >
+  {#if stage}
+    <div class="type-kicker text-[9px] text-fg-faint text-center mb-1.5">{stage}</div>
+  {/if}
+  <div class="flex items-center gap-2">
   <div class="flex-1 min-w-0 flex flex-col items-end gap-1">
     <button type="button" class="flex items-center gap-1.5 min-w-0 pressable disabled:cursor-default" onclick={() => openTeam(match.home)} disabled={!store.espnReachable}>
       <span class="font-semibold text-[13px] truncate">{home.name}</span>
@@ -80,5 +84,6 @@
     <button type="button" class="pressable disabled:cursor-default" onclick={() => openOwner(awayOwner)} disabled={!awayOwner}>
       <OwnerBadge employee={awayOwner} size="sm" />
     </button>
+  </div>
   </div>
 </div>
