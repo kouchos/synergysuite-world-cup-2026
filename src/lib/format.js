@@ -22,6 +22,22 @@ export function formatTime(iso) {
   });
 }
 
+export function formatDay(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString(IRISH_LOCALE, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    timeZone: IRISH_TZ,
+  });
+}
+
+// Stable YYYY-MM-DD key in Irish time, for grouping fixtures by matchday.
+// en-CA formats as ISO-like (2026-06-29), which also sorts lexicographically.
+export function dayKey(iso) {
+  return new Date(iso).toLocaleDateString('en-CA', { timeZone: IRISH_TZ });
+}
+
 export function timeUntil(iso) {
   const ms = new Date(iso).getTime() - Date.now();
   if (ms <= 0) return null;

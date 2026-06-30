@@ -3,6 +3,7 @@
 
   const tabs = [
     { id: 'group', label: 'Pool stage' },
+    { id: 'fixtures', label: 'Fixtures' },
     { id: 'knockout', label: 'Knockout ladder' },
     { id: 'winners', label: 'Winners' },
   ];
