@@ -34,10 +34,22 @@ const TTL = {
 
 // ── ESPN status → internal status ─────────────────────────────────────────────
 function statusOf(competition) {
-  const name = competition?.status?.type?.name ?? '';
-  if (/IN_PROGRESS|HALFTIME|FIRST_HALF|SECOND_HALF|EXTRA_TIME|SHOOTOUT/.test(name)) return 'live';
+  const type = competition?.status?.type ?? {};
+  const name = type.name ?? '';
+  // `completed` is ESPN's definitive "the game is over" flag — trust it first so
+  // a knockout tie decided on penalties (whose status name can read SHOOTOUT)
+  // settles to final instead of looking perpetually live.
+  if (type.completed === true) return 'final';
+  if (/IN_PROGRESS|HALFTIME|FIRST_HALF|SECOND_HALF|EXTRA_TIME|SHOOTOUT|PENALT/.test(name)) return 'live';
   if (/FINAL|FULL_TIME|END/.test(name)) return 'final';
   return 'scheduled';
+}
+
+// Penalty-shootout tally for a competitor, when the tie went to spot-kicks.
+// ESPN exposes it as `shootoutScore`; absent for games settled in normal time.
+function shootoutOf(competitor) {
+  const v = competitor?.shootoutScore;
+  return v == null || v === '' || !Number.isFinite(+v) ? null : parseInt(v, 10);
 }
 
 function minuteOf(competition, status) {
@@ -174,6 +186,8 @@ function partitionEvents(scoreboard) {
       away: awayCode,
       homeGoals: status === 'scheduled' ? null : parseInt(home?.score, 10),
       awayGoals: status === 'scheduled' ? null : parseInt(away?.score, 10),
+      homeShootout: status === 'scheduled' ? null : shootoutOf(home),
+      awayShootout: status === 'scheduled' ? null : shootoutOf(away),
       status,
       minute: minuteOf(comp, status),
       venue: comp?.venue?.fullName ?? null,

@@ -20,10 +20,19 @@
   const isFinal = $derived(match.status === 'final');
   const isLive = $derived(match.status === 'live');
   const isScheduled = $derived(match.status === 'scheduled');
-  const homeWon = $derived(isFinal && match.homeGoals > match.awayGoals);
-  const awayWon = $derived(isFinal && match.awayGoals > match.homeGoals);
-  // A team is knocked out when it loses a decided knockout tie (clear on goals;
-  // penalty shootouts come through level, so we can't flag a loser there).
+  // A knockout tie level on goals is decided on penalties — fall back to the
+  // shootout tally to pick the winner (and so the loser gets struck through).
+  const hasShootout = $derived(match.homeShootout != null && match.awayShootout != null);
+  const homeWon = $derived(
+    isFinal &&
+      (match.homeGoals > match.awayGoals ||
+        (hasShootout && match.homeGoals === match.awayGoals && match.homeShootout > match.awayShootout)),
+  );
+  const awayWon = $derived(
+    isFinal &&
+      (match.awayGoals > match.homeGoals ||
+        (hasShootout && match.awayGoals === match.homeGoals && match.awayShootout > match.homeShootout)),
+  );
   const homeLost = $derived(awayWon);
   const awayLost = $derived(homeWon);
 
@@ -69,7 +78,7 @@
         {#if isScheduled}
           <span class="text-[10px] type-cond not-italic font-medium text-fg-faint">{formatTime(match.utc)}</span>
         {:else if match.homeGoals != null}
-          {match.homeGoals}
+          {match.homeGoals}{#if hasShootout}<span class="text-[9px] text-fg-faint not-italic"> ({match.homeShootout})</span>{/if}
         {/if}
       </button>
     {:else if match.home}
@@ -104,7 +113,7 @@
       </button>
       <button type="button" class="ml-auto text-xs type-display tnum px-1.5 {awayWon ? 'text-volt' : 'text-fg-mute'} hover:bg-ink-4 rounded disabled:hover:bg-transparent disabled:cursor-default" onclick={openGame} disabled={!gameClickable}>
         {#if match.awayGoals != null}
-          {match.awayGoals}
+          {match.awayGoals}{#if hasShootout}<span class="text-[9px] text-fg-faint not-italic"> ({match.awayShootout})</span>{/if}
         {/if}
       </button>
       {#if isLive}
