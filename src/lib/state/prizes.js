@@ -171,6 +171,15 @@ export function survivorsLeader(state, employees) {
   return survivorsLeaderboard(state, employees)[0] ?? null;
 }
 
+// Whether the knockout stage has started — used to hide the "still in" prize
+// until it means something (in the group stage everyone still has all six).
+export function knockoutsUnderway(state) {
+  return (
+    (state.knockoutMatches ?? []).some((m) => m.status === 'live' || m.status === 'final') ||
+    r32Qualifiers(state) != null
+  );
+}
+
 /** Per-team breakdown for one employee: alive/out, and where each went out. */
 export function survivorBreakdown(state, employee) {
   const out = eliminatedTeams(state);
@@ -595,7 +604,9 @@ function survivorsRace(state, employees) {
     ids,
     survivorsLeaderboard(state, employees).map((r) => r.employee.id),
   );
-  const lines = employees.map((e) => ({ id: e.id, label: e.name, color: e.color }));
+  // `alive` now holds each player's current teams-remaining count — surface it in
+  // the line label so the chart reads e.g. "Eoin (4)".
+  const lines = employees.map((e) => ({ id: e.id, label: `${e.name} (${alive[e.id]})`, color: e.color }));
   return finalizeRace('survivors', frames, lines, ranksById, employees.length);
 }
 
