@@ -5,7 +5,7 @@
  * Worst-team tie-break rule (confirmed): earliest exit → fewest pts → worst GD → fewest goals scored.
  * At group stage with everyone still alive, the rule degenerates to: fewest pts → worst GD → fewest GF.
  */
-import { teamFor } from '../data/teams.js';
+import { teamFor, TEAMS } from '../data/teams.js';
 
 /**
  * Has anything actually happened yet? Used by Header to switch off the prize
@@ -103,6 +103,88 @@ export function goldenBootTable(state, employees) {
 
 export function goldenBootLeader(state, employees) {
   return goldenBootTable(state, employees)[0] ?? null;
+}
+
+// ── Teams still in the competition ────────────────────────────────────────────
+const isRealTeam = (code) => typeof code === 'string' && !!TEAMS[code];
+
+// Loser of a decided knockout tie (null while undecided). A tie level on goals is
+// settled on the penalty shootout — mirrors the bracket + adapter logic.
+function tieLoser(m) {
+  if (m?.status !== 'final' || m.homeGoals == null || m.awayGoals == null) return null;
+  if (m.homeGoals > m.awayGoals) return m.away;
+  if (m.awayGoals > m.homeGoals) return m.home;
+  if (m.homeShootout != null && m.awayShootout != null && m.homeShootout !== m.awayShootout) {
+    return m.homeShootout > m.awayShootout ? m.away : m.home;
+  }
+  return null;
+}
+
+// Group-stage exits are only counted once every Round-of-32 slot has a real
+// team, so we never flag a team as out while the bracket is still filling in.
+function r32Qualifiers(state) {
+  const r32 = (state.knockoutMatches ?? []).filter((m) => m.round === 'R32');
+  const drawn = r32.length > 0 && r32.every((m) => isRealTeam(m.home) && isRealTeam(m.away));
+  if (!drawn) return null;
+  const q = new Set();
+  for (const m of r32) {
+    q.add(m.home);
+    q.add(m.away);
+  }
+  return q;
+}
+
+/**
+ * FIFA codes of every team out of the tournament: knockout losers, plus
+ * group-stage teams that missed the Round of 32 once the bracket is drawn.
+ */
+export function eliminatedTeams(state) {
+  const out = new Set();
+  for (const m of state.knockoutMatches ?? []) {
+    const loser = tieLoser(m);
+    if (isRealTeam(loser)) out.add(loser);
+  }
+  const qualified = r32Qualifiers(state);
+  if (qualified) {
+    for (const g of state.groups ?? []) {
+      for (const row of g.standings ?? []) {
+        if (isRealTeam(row.fifaCode) && !qualified.has(row.fifaCode)) out.add(row.fifaCode);
+      }
+    }
+  }
+  return out;
+}
+
+/** Employees ranked by how many of their teams are still in the competition. */
+export function survivorsLeaderboard(state, employees) {
+  const out = eliminatedTeams(state);
+  return employees
+    .map((emp) => {
+      const teams = emp.teams.map((t) => ({ code: t.fifaCode, alive: !out.has(t.fifaCode) }));
+      const alive = teams.filter((t) => t.alive).length;
+      return { employee: emp, alive, total: emp.teams.length, teams };
+    })
+    .sort((a, b) => b.alive - a.alive || a.employee.name.localeCompare(b.employee.name));
+}
+
+export function survivorsLeader(state, employees) {
+  return survivorsLeaderboard(state, employees)[0] ?? null;
+}
+
+/** Per-team breakdown for one employee: alive/out, and where each went out. */
+export function survivorBreakdown(state, employee) {
+  const out = eliminatedTeams(state);
+  const km = state.knockoutMatches ?? [];
+  return employee.teams.map((t) => {
+    const code = t.fifaCode;
+    if (!out.has(code)) return { code, alive: true, exit: null };
+    const lost = km.find((m) => tieLoser(m) === code);
+    return {
+      code,
+      alive: false,
+      exit: lost ? { type: 'knockout', round: lost.round, match: lost } : { type: 'group' },
+    };
+  });
 }
 
 // ── Drill-down timelines ──────────────────────────────────────────────────────
@@ -451,15 +533,82 @@ function bootRace(state, employees, maxLines) {
   return finalizeRace('boot', frames, lines, ranksById, tracked.length);
 }
 
+// Survivors race — one line per employee, ranked by how many of their teams are
+// still alive (rank 1 = most). A frame lands each time an owned team is knocked
+// out: knockout losers at their match time, group non-qualifiers at the group
+// stage close.
+function survivorsRace(state, employees) {
+  const ids = employees.map((e) => e.id);
+  const ownerByCode = {};
+  for (const e of employees) for (const t of e.teams) ownerByCode[t.fifaCode] = e.id;
+
+  const elim = new Map();
+  for (const m of state.knockoutMatches ?? []) {
+    const loser = tieLoser(m);
+    if (isRealTeam(loser) && m.utc) elim.set(loser, new Date(m.utc).getTime());
+  }
+  const qualified = r32Qualifiers(state);
+  if (qualified) {
+    const lastGroup = Math.max(
+      0,
+      ...(state.fixtures ?? [])
+        .filter((f) => f.status === 'final' && f.utc)
+        .map((f) => new Date(f.utc).getTime()),
+    );
+    if (lastGroup > 0) {
+      for (const g of state.groups ?? []) {
+        for (const row of g.standings ?? []) {
+          if (isRealTeam(row.fifaCode) && !qualified.has(row.fifaCode) && !elim.has(row.fifaCode)) {
+            elim.set(row.fifaCode, lastGroup);
+          }
+        }
+      }
+    }
+  }
+
+  const events = [];
+  for (const [code, ms] of elim) {
+    if (ownerByCode[code] != null && Number.isFinite(ms)) events.push({ ms, code });
+  }
+  events.sort((a, b) => a.ms - b.ms);
+
+  const alive = Object.fromEntries(employees.map((e) => [e.id, e.teams.length]));
+  const ranksById = new Map(ids.map((id) => [id, []]));
+  const frames = [];
+  for (let i = 0; i < events.length; ) {
+    const ms = events[i].ms;
+    while (i < events.length && events[i].ms === ms) {
+      alive[ownerByCode[events[i].code]] -= 1;
+      i++;
+    }
+    const rank = ranksByOrder(
+      ids.map((id) => ({ id, v: alive[id] })),
+      (a, b) => b.v - a.v,
+    );
+    frames.push({ key: `t${ms}`, label: raceDayLabel(new Date(ms).toISOString()) });
+    for (const id of ids) ranksById.get(id).push(rank.get(id));
+  }
+
+  appendAuthoritativeFrame(
+    frames,
+    ranksById,
+    ids,
+    survivorsLeaderboard(state, employees).map((r) => r.employee.id),
+  );
+  const lines = employees.map((e) => ({ id: e.id, label: e.name, color: e.color }));
+  return finalizeRace('survivors', frames, lines, ranksById, employees.length);
+}
+
 /**
  * Build the position-over-time race for one leaderboard category.
- * @param {'overall'|'cards'|'worst'|'boot'} category
+ * @param {'overall'|'cards'|'worst'|'boot'|'survivors'} category
  */
 export function positionRace(category, state, employees, { maxLines = RACE_MAX_LINES } = {}) {
   if (category === 'overall') return overallRace(state, employees);
   if (category === 'cards') return cardsRace(state, employees);
   if (category === 'worst') return worstRace(state, employees, maxLines);
   if (category === 'boot') return bootRace(state, employees, maxLines);
+  if (category === 'survivors') return survivorsRace(state, employees);
   return emptyRace(category);
 }
 

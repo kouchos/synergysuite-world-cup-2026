@@ -95,6 +95,18 @@ test.describe('Mid-tournament mock (?mock=1)', () => {
     await expect(report).toContainText(/Mexico win/i);
   });
 
+  test('Teams-still-in leaderboard ranks players and drills into their teams', async ({ page }) => {
+    await page.getByRole('button', { name: 'Open the teams-still-in standings' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toContainText('Teams still in');
+    // The animated race chart renders for this category too.
+    await expect(dialog.locator('svg')).toBeVisible();
+    // Drill into the top player and confirm the per-team In/Out breakdown.
+    await dialog.locator('tbody button').first().click();
+    await expect(dialog).toContainText('The six teams');
+    await expect(dialog.getByText(/Out ·/).first()).toBeVisible();
+  });
+
   test('Winners view shows the pre-final placeholder', async ({ page }) => {
     await page.getByRole('button', { name: 'Winners' }).click();
     await expect(page.getByText('Tournament still in progress')).toBeVisible();

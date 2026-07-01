@@ -25,7 +25,7 @@ function assertWellFormed(race) {
 }
 
 test.describe('positionRace', () => {
-  for (const category of ['overall', 'cards', 'worst', 'boot']) {
+  for (const category of ['overall', 'cards', 'worst', 'boot', 'survivors']) {
     test(`${category} race is well-formed (mid-tournament mock)`, () => {
       const race = positionRace(category, MOCK_STATE, employees);
       expect(race.category).toBe(category);
