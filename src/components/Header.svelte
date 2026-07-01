@@ -8,6 +8,7 @@
     mostCardsLeaderboard,
     goldenBootLeader,
     survivorsLeader,
+    knockoutsUnderway,
   } from '../lib/state/prizes.js';
   import { modal } from '../lib/state/modal.svelte.js';
   import { store } from '../lib/state/store.svelte.js';
@@ -43,7 +44,10 @@
   const worst = $derived(active ? worstTeam(snapshot, employees) : null);
   const cards = $derived(active ? mostCardsLeaderboard(snapshot, employees) : []);
   const boot = $derived(active ? goldenBootLeader(snapshot, employees) : null);
-  const survivors = $derived(active ? survivorsLeader(snapshot, employees) : null);
+  // Only surface the "still in" prize once the knockouts begin — in the group
+  // stage every player still has all six teams, so the standings are all ties.
+  const showSurvivors = $derived(active && knockoutsUnderway(snapshot));
+  const survivors = $derived(showSurvivors ? survivorsLeader(snapshot, employees) : null);
 
   const overallLeader = $derived(overall[0]);
   const cardsLeader = $derived(cards[0]);
@@ -108,7 +112,7 @@
   </header>
 {:else}
   <header class="px-3 sm:px-5 pt-3 pb-2">
-    <div class="grid grid-cols-2 lg:grid-cols-[1.45fr_1fr_1fr_1fr_1fr] gap-2">
+    <div class="grid grid-cols-2 gap-2 {showSurvivors ? 'lg:grid-cols-[1.45fr_1fr_1fr_1fr_1fr]' : 'lg:grid-cols-[1.45fr_1fr_1fr_1fr]'}">
       <!-- Overall leader — the headline tile -->
       <div class="card clip-corner p-3.5 sm:p-4 col-span-2 lg:col-span-1
         bg-[linear-gradient(125deg,color-mix(in_srgb,var(--color-volt)_11%,var(--color-ink-2)),var(--color-ink-2)_62%)]
@@ -182,8 +186,8 @@
         {/if}
       </div>
 
-      <!-- Golden boot -->
-      <div class="card p-3 sm:p-3.5 flex flex-col cursor-pointer lift"
+      <!-- Golden boot — spans two columns on mobile only when it's the last tile. -->
+      <div class="card p-3 sm:p-3.5 flex flex-col cursor-pointer lift {showSurvivors ? '' : 'col-span-2 lg:col-span-1'}"
         role="button" tabindex="0" aria-label="Open the full golden boot standings"
         onclick={() => openPrize('boot')} onkeydown={(e) => prizeKeydown(e, 'boot')}>
         <div class="mb-2 flex items-center justify-between gap-2">
@@ -208,15 +212,15 @@
         {/if}
       </div>
 
-      <!-- Teams still in the competition -->
-      <div class="card p-3 sm:p-3.5 flex flex-col cursor-pointer lift"
-        role="button" tabindex="0" aria-label="Open the teams-still-in standings"
-        onclick={() => openPrize('survivors')} onkeydown={(e) => prizeKeydown(e, 'survivors')}>
-        <div class="mb-2 flex items-center justify-between gap-2">
-          <span class="type-kicker" style:color="#4d94ff">Still in</span>
-          <span class="type-kicker text-fg-faint" aria-hidden="true">table ›</span>
-        </div>
-        {#if survivors}
+      <!-- Teams still in the competition — knockout stage onward only -->
+      {#if showSurvivors && survivors}
+        <div class="card p-3 sm:p-3.5 flex flex-col cursor-pointer lift"
+          role="button" tabindex="0" aria-label="Open the teams-still-in standings"
+          onclick={() => openPrize('survivors')} onkeydown={(e) => prizeKeydown(e, 'survivors')}>
+          <div class="mb-2 flex items-center justify-between gap-2">
+            <span class="type-kicker" style:color="#4d94ff">Still in</span>
+            <span class="type-kicker text-fg-faint" aria-hidden="true">table ›</span>
+          </div>
           <button type="button" class="flex items-center gap-2.5 text-left pressable group" onclick={(e) => openEmployee(survivors.employee, e)}>
             <span class="w-1.5 self-stretch rounded-sm shrink-0" style:background-color={survivors.employee.color} aria-hidden="true"></span>
             <span class="type-display text-lg sm:text-xl leading-[0.95] transition-colors">{survivors.employee.name}</span>
@@ -225,8 +229,8 @@
             {#key survivors.alive}<span class="score-pop type-display text-fg text-base" style:color="#4d94ff">{survivors.alive}</span>{/key}
             <span class="text-fg-faint">of {survivors.total} teams in</span>
           </div>
-        {/if}
-      </div>
+        </div>
+      {/if}
     </div>
   </header>
 
