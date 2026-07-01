@@ -341,10 +341,17 @@ export async function fetchLiveState({ live = false } = {}) {
     const partitioned = partitionEvents(sb.value);
     fixtures = mergeFixtures(baseline.fixtures, partitioned.fixtures);
     if (partitioned.knockoutMatches.length) {
-      // The merge joins by real team pairing, so ESPN's pre-tournament bracket
-      // previews can't leak into the openfootball placeholder cells — no
-      // phase gate needed.
-      knockoutMatches = mergeKnockouts(knockoutMatches, partitioned.knockoutMatches);
+      // Alternate two steps until the bracket stops changing:
+      //   1. merge ESPN results in (joined by real team pairing, so ESPN's
+      //      pre-tournament previews can't leak into placeholder cells)
+      //   2. resolve "W74"/"L101" feeder placeholders into the actual winners
+      // Each round carries results one rung up the bracket (R32 → R16 → …), and
+      // re-merging lets ESPN's own scores attach to a tie once we've filled in
+      // its teams.
+      for (let pass = 0; pass < 5; pass++) {
+        knockoutMatches = mergeKnockouts(knockoutMatches, partitioned.knockoutMatches);
+        if (!resolveBracketProgression(knockoutMatches)) break;
+      }
     }
   }
 
@@ -445,6 +452,51 @@ function mergeKnockouts(baseline, espn) {
 
 function isRealCode(code) {
   return typeof code === 'string' && /^[A-Z]{3}$/.test(code);
+}
+
+// Winner / loser codes of a decided knockout tie (null while undecided). Handles
+// penalty shootouts — a level tie is settled on the shootout tally.
+function decideTie(m) {
+  if (m?.status !== 'final' || m.homeGoals == null || m.awayGoals == null) return { w: null, l: null };
+  if (m.homeGoals > m.awayGoals) return { w: m.home, l: m.away };
+  if (m.awayGoals > m.homeGoals) return { w: m.away, l: m.home };
+  if (m.homeShootout != null && m.awayShootout != null && m.homeShootout !== m.awayShootout) {
+    return m.homeShootout > m.awayShootout ? { w: m.home, l: m.away } : { w: m.away, l: m.home };
+  }
+  return { w: null, l: null };
+}
+
+// Fill knockout bracket progression: openfootball seeds later rounds with feeder
+// references like "W74" (winner of match 74) or "L101" (loser of 101). Once we
+// know a tie's result we can resolve those into the real team codes ourselves,
+// so the Round of 16+ shows who advanced without waiting for the feed to publish
+// the next-round draw. Iterates so a resolved R16 winner feeds the QF, and so on.
+// Returns true if it changed anything.
+function resolveBracketProgression(knockoutMatches) {
+  const byNum = new Map();
+  for (const m of knockoutMatches) if (m.num != null) byNum.set(String(m.num), m);
+  const resolve = (code) => {
+    const ref = /^([WL])(\d+)$/.exec(String(code ?? ''));
+    if (!ref) return null; // already a real team (or an unknown placeholder)
+    const src = byNum.get(ref[2]);
+    if (!src) return null;
+    const decided = decideTie(src);
+    const team = ref[1] === 'W' ? decided.w : decided.l;
+    return isRealCode(team) ? team : null;
+  };
+  let changedEver = false;
+  for (let pass = 0; pass < 6; pass++) {
+    let changed = false;
+    for (const m of knockoutMatches) {
+      const h = resolve(m.home);
+      if (h && h !== m.home) { m.home = h; changed = true; }
+      const a = resolve(m.away);
+      if (a && a !== m.away) { m.away = a; changed = true; }
+    }
+    changedEver ||= changed;
+    if (!changed) break;
+  }
+  return changedEver;
 }
 
 function mergeFixtures(baseline, espn) {
