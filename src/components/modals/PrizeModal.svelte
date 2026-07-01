@@ -7,6 +7,8 @@
     mostCardsLeaderboard,
     worstTeamRanking,
     goldenBootTable,
+    survivorsLeaderboard,
+    survivorBreakdown,
     cardTimeline,
     pointsTimeline,
     goalTimeline,
@@ -41,6 +43,11 @@
       accent: '#f2c14e',
       blurb: 'Tournament top scorers — the prize follows whoever owns the scorer’s team.',
     },
+    survivors: {
+      title: 'Teams still in',
+      accent: '#4d94ff',
+      blurb: 'How many of each player’s six teams are still in the competition — the more you have left, the better your odds of a winner.',
+    },
   };
   const meta = $derived(META[category] ?? META.overall);
 
@@ -51,6 +58,7 @@
   const cards = $derived(category === 'cards' ? mostCardsLeaderboard(state, employees) : []);
   const worst = $derived(category === 'worst' ? worstTeamRanking(state, employees) : []);
   const boot = $derived(category === 'boot' ? goldenBootTable(state, employees) : []);
+  const survivors = $derived(category === 'survivors' ? survivorsLeaderboard(state, employees) : []);
 
   // Animated "position over time" race for the standings view of this category.
   const race = $derived(positionRace(category, state, employees));
@@ -118,6 +126,10 @@
               <th class="font-[650] py-2 text-right w-10" scope="col">Pts</th>
               <th class="font-[650] py-2 text-right w-10" scope="col">GD</th>
               <th class="font-[650] py-2 text-right w-10 pr-3" scope="col">GF</th>
+            {:else if category === 'survivors'}
+              <th class="font-[650] py-2" scope="col">Player</th>
+              <th class="font-[650] py-2" scope="col">Teams left</th>
+              <th class="font-[650] py-2 text-right w-14 pr-3" scope="col">In</th>
             {:else}
               <th class="font-[650] py-2" scope="col">Player</th>
               <th class="font-[650] py-2" scope="col">Team</th>
@@ -195,6 +207,32 @@
                 <td class="text-right tnum type-cond text-fg-mute pr-3">{r.row.gf}</td>
               </tr>
             {/each}
+          {:else if category === 'survivors'}
+            {#each survivors as r, i (r.employee.id)}
+              <tr
+                class="border-t border-line/60 hover:bg-ink-3 cursor-pointer transition-colors"
+                onclick={() => (selected = r.employee.id)}
+              >
+                <td class="py-2 pl-3 tnum type-display text-sm {i === 0 ? 'text-[#4d94ff]' : 'text-fg-faint'}">{i + 1}</td>
+                <td class="py-2 pl-0 relative">
+                  <span class="absolute left-0 top-0 bottom-0 w-1" style:background-color={r.employee.color} aria-hidden="true"></span>
+                  <button type="button" class="font-semibold text-[13px] pl-3 text-left" onclick={() => (selected = r.employee.id)}>{r.employee.name}</button>
+                </td>
+                <td class="py-2">
+                  <span class="inline-flex flex-wrap gap-1">
+                    {#each r.teams as tm (tm.code)}
+                      {@const t = teamFor(tm.code)}
+                      <span
+                        class="text-base leading-none {tm.alive ? '' : 'opacity-30 grayscale'}"
+                        title={`${t.name}${tm.alive ? '' : ' (out)'}`}
+                        aria-label={`${t.name}${tm.alive ? '' : ' — out'}`}
+                      >{t.flag}</span>
+                    {/each}
+                  </span>
+                </td>
+                <td class="text-right tnum type-display text-sm pr-3">{r.alive}<span class="text-fg-faint text-xs">/{r.total}</span></td>
+              </tr>
+            {/each}
           {:else}
             {#each boot as r, i (`${r.player}|${r.team}`)}
               {@const t = teamFor(r.team)}
@@ -229,7 +267,11 @@
     </div>
 
     <p class="mt-3 text-xs text-fg-faint">
-      {category === 'worst' ? 'Click a team to see how it got there.' : 'Click a row to see where the points came from.'}
+      {category === 'worst'
+        ? 'Click a team to see how it got there.'
+        : category === 'survivors'
+          ? 'Click a player to see the fate of each of their teams.'
+          : 'Click a row to see where the points came from.'}
     </p>
 
     <!-- Position-over-time race: replays how each line's table position moved
@@ -434,6 +476,50 @@
       {:else}
         <p class="text-fg-faint text-sm">No per-match event data for these goals.</p>
       {/if}
+    {/if}
+  {:else if category === 'survivors'}
+    {@const emp = employees.find((e) => e.id === selected)}
+    {@const row = survivors.find((r) => r.employee.id === selected)}
+    {@const rank = survivors.findIndex((r) => r.employee.id === selected) + 1}
+    {@const breakdown = emp ? survivorBreakdown(state, emp) : []}
+    {@render backButton()}
+    {#if emp && row}
+      <div class="card clip-corner p-4 mb-4"
+        style:background="linear-gradient(135deg, color-mix(in srgb, {emp.color} 14%, var(--color-ink-2)), var(--color-ink-2) 65%)">
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <span class="type-display text-2xl">{emp.name}</span>
+          <span class="text-fg-mute text-sm tnum type-cond">
+            <span class="type-display text-base" style:color="#4d94ff">{row.alive}</span> of {row.total} teams still in · #{rank}
+          </span>
+        </div>
+        <p class="mt-2 text-sm text-fg-mute">
+          {#if row.alive === 0}
+            All six teams are out — no runners left in the race.
+          {:else if rank === 1}
+            Leading the pack with the most teams still standing — the best shot at owning the champion.
+          {:else}
+            {row.alive} team{row.alive === 1 ? '' : 's'} still alive and chasing the trophy.
+          {/if}
+        </p>
+      </div>
+
+      <div class="type-kicker text-fg-mute kicker-slash mb-2">The six teams</div>
+      <ol class="space-y-1.5">
+        {#each breakdown as tm (tm.code)}
+          {@const t = teamFor(tm.code)}
+          <li class="card-raised px-3 py-2 flex items-center gap-3 text-sm {tm.alive ? '' : 'opacity-70'}">
+            <span class="text-xl leading-none shrink-0 {tm.alive ? '' : 'grayscale'}" aria-hidden="true">{t.flag}</span>
+            <span class="flex-1 min-w-0 font-semibold truncate {tm.alive ? '' : 'line-through text-fg-faint'}">{t.name}</span>
+            {#if tm.alive}
+              <span class="type-kicker text-[10px] px-1.5 py-px rounded border" style:color="#4d94ff" style:border-color="color-mix(in srgb, #4d94ff 40%, transparent)">In</span>
+            {:else if tm.exit?.type === 'knockout'}
+              <span class="type-kicker text-live text-[10px] border border-live/40 rounded px-1.5 py-px">Out · {tm.exit.round}</span>
+            {:else}
+              <span class="type-kicker text-fg-faint text-[10px] border border-line rounded px-1.5 py-px">Out · Groups</span>
+            {/if}
+          </li>
+        {/each}
+      </ol>
     {/if}
   {:else}
     {@const r = worst.find((w) => w.row.fifaCode === selected)}
