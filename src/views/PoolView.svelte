@@ -2,7 +2,7 @@
   import GroupTable from '../components/GroupTable.svelte';
   import MatchCard from '../components/MatchCard.svelte';
 
-  let { state, employees } = $props();
+  let { state, employees, onShowFixtures } = $props();
 
   const groups = $derived(state.groups ?? []);
 
@@ -16,7 +16,17 @@
     <!-- Live rail leads on mobile, sits right of the groups on desktop. -->
     <aside class="space-y-4 order-first lg:order-last">
       <section class="rise-in">
-        <h2 class="type-kicker text-live kicker-slash mb-2">Live now</h2>
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <h2 class="type-kicker text-live kicker-slash">Live now</h2>
+          {#if onShowFixtures}
+            <button
+              type="button"
+              class="type-kicker text-fg-faint hover:text-fg pressable"
+              aria-label="Open the Fixtures view"
+              onclick={onShowFixtures}
+            >all fixtures ›</button>
+          {/if}
+        </div>
         <div class="space-y-2">
           {#each live as m (m.id)}
             <MatchCard match={m} {employees} />

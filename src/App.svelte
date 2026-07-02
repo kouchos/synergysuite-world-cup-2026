@@ -129,7 +129,7 @@
   <main class="flex-1">
     {#if store.view === 'group'}
       <div in:fade={{ duration: dur(180) }}>
-        <PoolView state={store.state} employees={store.employees} />
+        <PoolView state={store.state} employees={store.employees} onShowFixtures={() => selectView('fixtures')} />
       </div>
     {:else if store.view === 'fixtures'}
       <div in:fade={{ duration: dur(180) }}>
