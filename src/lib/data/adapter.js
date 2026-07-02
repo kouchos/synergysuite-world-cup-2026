@@ -253,7 +253,7 @@ function normaliseStandings(payload) {
 }
 
 // ── Top scorers — aggregate goals across all fixtures ─────────────────────────
-function topScorersFrom(fixtures) {
+export function topScorersFrom(fixtures) {
   const tally = new Map();
   for (const fx of fixtures) {
     for (const ev of fx.events ?? []) {
@@ -264,7 +264,9 @@ function topScorersFrom(fixtures) {
       tally.set(key, cur);
     }
   }
-  return [...tally.values()].sort((a, b) => b.goals - a.goals).slice(0, 12);
+  return [...tally.values()]
+    .sort((a, b) => b.goals - a.goals || a.player.localeCompare(b.player))
+    .slice(0, 12);
 }
 
 // ── News ──────────────────────────────────────────────────────────────────────
