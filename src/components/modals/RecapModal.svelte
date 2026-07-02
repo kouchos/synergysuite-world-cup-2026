@@ -87,7 +87,7 @@
               <!-- Key events, home side left / away side right -->
               {#if events.length}
                 <div class="mt-2.5 pt-2.5 border-t border-line/60 space-y-1">
-                  {#each events as ev (`${ev.minute}-${ev.player}-${ev.type}`)}
+                  {#each events as ev, i (`${ev.minute}-${ev.player}-${ev.type}-${i}`)}
                     {@const onHome = ev.team === m.home}
                     <div class="flex items-center gap-2 text-xs {onHome ? '' : 'flex-row-reverse'}">
                       <span class="w-8 shrink-0 text-fg-faint tnum type-display {onHome ? 'text-right' : 'text-left'}">{ev.minute}'</span>

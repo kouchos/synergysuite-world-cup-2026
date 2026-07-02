@@ -26,6 +26,9 @@
     modal.prize(category);
   }
   function prizeKeydown(e, category) {
+    // Ignore keydowns that bubbled up from an inner focusable (e.g. the
+    // leader's name button) — only the tile itself should open the prize table.
+    if (e.target !== e.currentTarget) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       modal.prize(category);
