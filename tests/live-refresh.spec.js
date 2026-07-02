@@ -55,8 +55,9 @@ function finalScoreboard(home) {
   };
 }
 
-// `board` is a mutable holder ({ value }) so a test can change the scoreboard
-// payload mid-run and have the next refresh pick it up.
+// `board` is a mutable holder ({ value, fail }) so a test can change the
+// scoreboard payload mid-run and have the next refresh pick it up, or flip
+// `fail` to simulate the scoreboard endpoint being unreachable (outage).
 async function interceptData(page, board, counters) {
   await page.route('**/raw.githubusercontent.com/**', (route) =>
     route.fulfill({ json: { matches: [] } }),
@@ -65,6 +66,7 @@ async function interceptData(page, board, counters) {
     const url = route.request().url();
     if (url.includes('/scoreboard')) {
       counters.scoreboard += 1;
+      if (board.fail) return route.abort('failed');
       return route.fulfill({ json: board.value });
     }
     if (url.includes('/standings')) return route.fulfill({ json: { children: [] } });
@@ -153,4 +155,66 @@ test('a goal scored while the app was idle/backgrounded does not flash on resume
   // 6-min-old goal must not surface as if it just happened.
   await page.waitForTimeout(800);
   await expect(page.getByText('GOAL!')).toHaveCount(0);
+});
+
+test('reconnecting after an outage does not storm-celebrate replayed goals', async ({ page }) => {
+  // `swr` (cache.js) never throws: while the scoreboard endpoint is
+  // unreachable it silently serves stale cached data with source 'stale', so
+  // every tick still "succeeds" from the store's point of view and lastSync
+  // stays fresh. Without guarding on freshness, the tick that finally reaches
+  // the network again would diff straight against that stale baseline and
+  // flash every goal scored during the outage at once.
+  // This test chains three fast-forwarded ticks (vs one for the other cases
+  // in this file), each a real network round-trip, so give it more headroom
+  // than the default 30s.
+  test.setTimeout(60000);
+  const counters = { scoreboard: 0 };
+  const board = { value: liveScoreboard('1'), fail: false };
+  await interceptData(page, board, counters);
+  await page.clock.install();
+
+  // The footer's source label (App.svelte's `sourceLabel`) doubles as a
+  // reliable "this tick has fully landed" signal: it only updates once the
+  // store has applied diagnostics for the *current* tick, which happens
+  // synchronously right before `schedule()` queues the next timer. Waiting on
+  // the raw request counter alone is a race — the counter increments the
+  // instant the browser *issues* the request, well before the store finishes
+  // processing the response and re-arms the timer that a subsequent
+  // `page.clock.fastForward()` needs to already exist.
+  const footer = page.locator('footer');
+
+  // (a) first tick: live scoreboard served over the network — fresh baseline.
+  await page.goto('/?nocache=1');
+  await expect(page.getByRole('button', { name: /Pool stage/ })).toBeVisible();
+  await expect.poll(() => counters.scoreboard).toBe(1);
+  await expect(footer.getByText('ESPN unreachable')).not.toBeVisible();
+
+  // (b) outage: the scoreboard route now fails every request. Fast-forward
+  // past the live scoreboard TTL (30s) and the 60s live tick so a request is
+  // attempted, fails, and swr falls back to the stale cached payload (source
+  // 'stale').
+  board.fail = true;
+  await page.clock.fastForward('01:05');
+  await expect.poll(() => counters.scoreboard, { timeout: 10000 }).toBe(2);
+  await expect(footer.getByText('ESPN unreachable')).toBeVisible({ timeout: 10000 });
+
+  // (c) reconnect: the route succeeds again with a bumped score. This is a
+  // genuine goal versus the very first snapshot, but the previous applied
+  // snapshot (from the stale tick) wasn't fresh, so the diff must be
+  // suppressed rather than flashing the replayed goal.
+  board.fail = false;
+  board.value = liveScoreboard('2');
+  await page.clock.fastForward('01:05');
+  await expect.poll(() => counters.scoreboard, { timeout: 10000 }).toBe(3);
+  await expect(footer.getByText('ESPN unreachable')).not.toBeVisible({ timeout: 10000 });
+  await page.waitForTimeout(800);
+  await expect(page.getByText('GOAL!')).toHaveCount(0);
+
+  // (d) a further genuine goal at the normal live cadence, fresh-vs-fresh,
+  // must still flash — the outage guard shouldn't wedge celebrations off
+  // permanently.
+  board.value = liveScoreboard('3');
+  await page.clock.fastForward('01:05');
+  await expect.poll(() => counters.scoreboard, { timeout: 10000 }).toBe(4);
+  await expect(page.getByText('GOAL!')).toBeVisible();
 });
