@@ -112,6 +112,13 @@ test.describe('Mid-tournament mock (?mock=1)', () => {
     await expect(page.getByText('Tournament still in progress')).toBeVisible();
   });
 
+  test('pool view live rail links across to the Fixtures view', async ({ page }) => {
+    await page.getByRole('button', { name: /Pool stage/ }).click();
+    await page.getByRole('button', { name: 'Open the Fixtures view' }).click();
+    await expect(page.getByRole('button', { name: 'Fixtures', exact: true })).toHaveAttribute('aria-current', 'true');
+    await expect(page.getByRole('button', { name: /Upcoming/ })).toBeVisible();
+  });
+
   test('Fixtures view lists upcoming and past games grouped by day', async ({ page }) => {
     await page.getByRole('button', { name: 'Fixtures', exact: true }).click();
     // Live tie carries its stage label, plus the Upcoming/Results toggle.

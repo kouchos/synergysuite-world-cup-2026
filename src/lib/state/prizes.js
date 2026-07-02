@@ -52,18 +52,42 @@ export function overallLeaderboard(state, employees) {
     .sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
 }
 
+// Knockout round → numeric exit rank, later rounds surviving longer. SF and
+// Third share a value: the bronze match is a *consolation* fixture for the
+// two SF losers, so losing it must not read as a later exit than the other
+// SF loser — both teams' tournament exit was the semi-final.
+const EXIT_ROUND_BY_KNOCKOUT_ROUND = { R32: 2, R16: 3, QF: 4, SF: 5, Third: 5, Final: 6 };
+
+// How far a team got before going out: 1 = group stage, 2..6 = the knockout
+// round they lost in. A team can be `tieLoser` of both its SF and the
+// Third-place match it lost afterwards — take the MAX mapped value
+// explicitly (moot while SF === Third === 5, but keeping it explicit means
+// this can't silently regress if the mapping ever diverges).
+function exitRoundOf(state, fifaCode) {
+  let max = null;
+  for (const m of state.knockoutMatches ?? []) {
+    if (tieLoser(m) !== fifaCode) continue;
+    const r = EXIT_ROUND_BY_KNOCKOUT_ROUND[m.round];
+    if (r != null && (max == null || r > max)) max = r;
+  }
+  return max ?? 1; // eliminated with no recorded knockout loss → group-stage exit
+}
+
 export function worstTeamRanking(state, employees) {
   const byTeam = standingsByTeam(state);
+  const eliminated = eliminatedTeams(state);
   return Object.values(byTeam)
     .map((row) => ({
       row,
       owner: teamOwner(row.fifaCode, employees),
-      eliminated: row.eliminated ?? false,
-      exitRound: row.exitRound ?? null,
+      eliminated: eliminated.has(row.fifaCode),
+      exitRound: eliminated.has(row.fifaCode) ? exitRoundOf(state, row.fifaCode) : null,
     }))
     .sort((a, b) => {
       if (a.eliminated !== b.eliminated) return a.eliminated ? -1 : 1;
-      if (a.exitRound && b.exitRound && a.exitRound !== b.exitRound) return a.exitRound - b.exitRound;
+      if (a.exitRound != null && b.exitRound != null && a.exitRound !== b.exitRound) {
+        return a.exitRound - b.exitRound;
+      }
       return a.row.pts - b.row.pts || a.row.gd - b.row.gd || a.row.gf - b.row.gf;
     });
 }
@@ -94,7 +118,7 @@ export function mostCardsLeaderboard(state, employees) {
       }
       return { employee: emp, yellow, red, points: yellow + red * 2 };
     })
-    .sort((a, b) => b.points - a.points);
+    .sort((a, b) => b.points - a.points || b.red - a.red || a.employee.name.localeCompare(b.employee.name));
 }
 
 export function goldenBootTable(state, employees) {
@@ -626,18 +650,22 @@ export function positionRace(category, state, employees, { maxLines = RACE_MAX_L
 export function tournamentWinner(state, employees) {
   const final = (state.knockoutMatches ?? []).find((m) => m.round === 'Final');
   if (!final || final.status !== 'final') return null;
-  const winnerCode =
-    final.homeGoals > final.awayGoals
-      ? final.home
-      : final.awayGoals > final.homeGoals
-        ? final.away
-        : null;
-  if (!winnerCode) return null;
+  // Reuse the same decided-tie logic as everywhere else (group-stage
+  // eliminations, survivor breakdowns) instead of re-deriving winner/loser
+  // here — a Final level on goals is decided on penalties, not left null.
+  const loser = tieLoser(final);
+  if (!loser) return null;
+  const winnerCode = loser === final.home ? final.away : final.home;
+  const level = final.homeGoals === final.awayGoals;
+  const pens =
+    level && final.homeShootout != null && final.awayShootout != null
+      ? ` (${final.homeShootout}–${final.awayShootout} pens)`
+      : '';
   return {
     team: winnerCode,
     owner: teamOwner(winnerCode, employees),
-    score: `${final.homeGoals}–${final.awayGoals}`,
-    opponent: winnerCode === final.home ? final.away : final.home,
-    opponentOwner: teamOwner(winnerCode === final.home ? final.away : final.home, employees),
+    score: `${final.homeGoals}–${final.awayGoals}${pens}`,
+    opponent: loser,
+    opponentOwner: teamOwner(loser, employees),
   };
 }

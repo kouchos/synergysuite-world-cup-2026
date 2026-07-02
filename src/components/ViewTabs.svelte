@@ -2,8 +2,8 @@
   let { value, phase, onSelect } = $props();
 
   const tabs = [
-    { id: 'group', label: 'Pool stage' },
     { id: 'fixtures', label: 'Fixtures' },
+    { id: 'group', label: 'Pool stage' },
     { id: 'knockout', label: 'Knockout ladder' },
     { id: 'winners', label: 'Winners' },
   ];

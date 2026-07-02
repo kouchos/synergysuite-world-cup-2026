@@ -328,7 +328,7 @@
         <section class="mb-5">
           <h3 class="type-kicker text-fg-mute kicker-slash mb-3">Key events</h3>
           <div class="space-y-1.5">
-            {#each matchEvents as ev (`${ev.minute}-${ev.player}-${ev.type}`)}
+            {#each matchEvents as ev, i (`${ev.minute}-${ev.player}-${ev.type}-${i}`)}
               {@const onHome = ev.team === match.home}
               <div class="flex items-center gap-3 text-sm">
                 <span class="w-10 text-right text-fg-faint tnum type-display text-xs">{ev.minute}'</span>

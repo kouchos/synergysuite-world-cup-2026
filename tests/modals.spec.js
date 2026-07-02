@@ -310,3 +310,91 @@ test.describe('Cross-navigation between modals', () => {
     await expect(page.getByRole('heading', { name: 'Hazel' })).toBeVisible();
   });
 });
+
+test.describe('Scroll lock survives modal→modal navigation', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/?mock=1');
+    await expect(page.getByRole('button', { name: /Pool stage/ })).toBeVisible();
+  });
+
+  test('body stays scroll-locked across a chain of modals and unlocks only once the last one closes', async ({ page }) => {
+    // Open the employee modal — this is the point a Modal instance first
+    // mounts, so overflow should already be locked.
+    await page.locator('header').getByRole('button', { name: /^Hazel$/ }).click();
+    await expect(page.getByRole('heading', { name: 'Hazel' })).toBeVisible();
+    await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe('hidden');
+
+    // Navigate employee → team: App.svelte's {:else if} chain unmounts the
+    // EmployeeModal's <Modal> (which plays a ~220ms fly outro) while mounting
+    // a brand-new <Modal> inside TeamModal. This is the overlap window where
+    // the old refcount-less code broke.
+    await page.getByRole('dialog').getByRole('button', { name: /Brazil/ }).first().click();
+    await expect(page.getByRole('heading', { name: 'Brazil' })).toBeVisible();
+    await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe('hidden');
+
+    // Navigate team → employee again (owner badge) — another mount/outro overlap.
+    await page.getByRole('dialog').getByRole('button', { name: /Sweepstake owner.*Hazel/ }).click();
+    await expect(page.getByRole('heading', { name: 'Hazel' })).toBeVisible();
+    await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe('hidden');
+
+    // Close everything.
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+
+    // The regression: the last-mounted modal's teardown could restore
+    // 'hidden' (captured from the still-open previous modal) after the true
+    // final unlock already ran, permanently locking the page. Poll well past
+    // the ~220ms outro to be sure it actually settles at ''.
+    await expect
+      .poll(() => page.evaluate(() => document.body.style.overflow), { timeout: 2000 })
+      .toBe('');
+  });
+});
+
+test.describe('Keyboard activation on prize tiles', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/?mock=1');
+    await expect(page.getByRole('button', { name: /Pool stage/ })).toBeVisible();
+  });
+
+  test('Enter on the overall leader name button opens the employee modal, not the prize standings table', async ({ page }) => {
+    // Hazel's name is a real <button> nested inside the "Overall leader"
+    // tile's role="button" div. Enter here must activate the button itself,
+    // not bubble up and trigger the tile's own prizeKeydown handler.
+    const leaderButton = page.locator('header').getByRole('button', { name: /^Hazel$/ });
+    await leaderButton.focus();
+    await expect(leaderButton).toBeFocused();
+    await page.keyboard.press('Enter');
+
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Hazel' })).toBeVisible();
+    await expect(page.getByText(/Sweepstake player/i)).toBeVisible();
+    // The bug opened the prize standings table instead — make sure it didn't.
+    await expect(page.getByRole('heading', { name: 'Overall race' })).not.toBeVisible();
+  });
+});
+
+test.describe('Modal focus management', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/?mock=1');
+    await expect(page.getByRole('button', { name: /Pool stage/ })).toBeVisible();
+  });
+
+  test('opening a modal moves focus into the dialog and closing returns it to the trigger', async ({ page }) => {
+    const trigger = page.locator('header').getByRole('button', { name: /^Hazel$/ });
+    await trigger.click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+
+    const focusInsideDialog = await page.evaluate(() => {
+      const dialog = document.querySelector('[role="dialog"]');
+      return !!dialog && dialog.contains(document.activeElement);
+    });
+    expect(focusInsideDialog).toBeTruthy();
+
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+
+    // Focus returns to the element that opened the modal in the first place.
+    await expect(trigger).toBeFocused();
+  });
+});

@@ -3,6 +3,7 @@ import { MOCK_STATE, MOCK_STATE_FINAL } from '../data/mock.js';
 import { fetchLiveState, backfillEvents } from '../data/adapter.js';
 import { purge as purgeCache } from '../cache.js';
 import { celebrations } from './celebrations.svelte.js';
+import { detectActivity, intervalFor } from './activity.js';
 
 const employees = employeesConfig.employees;
 
@@ -42,23 +43,9 @@ const TICK_MS = 30 * 1000;
 // window we silently rebaseline instead of celebrating.
 const MAX_CELEBRATION_GAP_MS = 2 * 60 * 1000;
 
-function detectActivity(state) {
-  if (!state) return 'idle';
-  const live =
-    state.fixtures?.some((f) => f.status === 'live') ||
-    state.knockoutMatches?.some((m) => m.status === 'live');
-  if (live) return 'live';
-  // Within match window of any fixture happening today?
-  const today = new Date().toISOString().slice(0, 10);
-  const todayMatch = state.fixtures?.some((f) => f.utc?.startsWith(today));
-  return todayMatch ? 'matchday' : 'idle';
-}
-
-function intervalFor(activity) {
-  if (activity === 'live') return 60 * 1000;       // tight during play
-  if (activity === 'matchday') return 5 * 60 * 1000; // tournament day, no match running
-  return 30 * 60 * 1000;                            // quiet
-}
+// detectActivity/intervalFor live in ./activity.js — a plain (rune-free)
+// module so they can be unit-tested directly in Node (see
+// tests/activity.spec.js) without a Svelte compile step.
 
 function createStore() {
   const mode = modeFromUrl();
@@ -70,9 +57,14 @@ function createStore() {
   let diagnostics = $state(null);
   let nextRefresh = $state(null);
   let timerId = null;
-  // The first live fetch replaces the mock baseline — diffing against that
-  // would fire bogus goal celebrations, so only diff live-vs-live snapshots.
-  let hadLiveSnapshot = false;
+  // Whether the *previously applied* snapshot's scoreboard data was fresh
+  // (network or cache) rather than a stale outage fallback (see tick() for
+  // the full explanation). Starts false so the very first live tick — which
+  // would otherwise diff against the mock baseline — never celebrates.
+  let prevFresh = false;
+  // Plain (non-reactive) generation counter guarding the fire-and-forget
+  // event backfill in tick() — see the comment there.
+  let gen = 0;
 
   const phase = $derived(snapshot?.phase ?? 'group');
   const view = $derived(activeView ?? phase);
@@ -92,21 +84,44 @@ function createStore() {
     syncing = true;
     try {
       const next = await fetchLiveState({ live: activity === 'live' });
-      // Only celebrate goals when diffing against a recent snapshot — see
-      // MAX_CELEBRATION_GAP_MS. A stale baseline (resume after suspend / long
-      // idle) would flash old goals as if they just occurred.
+      // `swr` (cache.js) never throws — during an outage it silently returns
+      // stale cached data with source 'stale', so a failed-to-reach-ESPN tick
+      // still looks like a "successful" fetch from here. Diffing a fresh
+      // post-outage snapshot against an hours-old stale one (or vice versa)
+      // would flash every goal scored during the outage all at once. So we
+      // only diff when BOTH the previously applied snapshot and this one are
+      // fresh (network or cache, not stale-fallback) — same predicate as the
+      // `espnReachable` derived below.
+      const fresh =
+        next._diagnostics?.sources?.scoreboard === 'network' ||
+        next._diagnostics?.sources?.scoreboard === 'cache';
+      // This subsumes the old "don't diff against the mock baseline" guard:
+      // prevFresh starts false, so the first live tick never celebrates
+      // either. On top of that, the MAX_CELEBRATION_GAP_MS/lastSync-age guard
+      // still applies — it covers tab-suspend, where no ticks ran at all
+      // (stale or otherwise) so even a fresh→fresh diff would be comparing
+      // against an hours-old baseline.
       const snapshotAge = lastSync ? Date.now() - lastSync.getTime() : Infinity;
-      if (hadLiveSnapshot && snapshotAge <= MAX_CELEBRATION_GAP_MS) {
+      if (prevFresh && fresh && snapshotAge <= MAX_CELEBRATION_GAP_MS) {
         celebrations.fromSnapshots(snapshot, next, employees);
       }
-      hadLiveSnapshot = true;
+      prevFresh = fresh;
       snapshot = next;
+      // Guards the fire-and-forget backfill below: it fetches per-match
+      // summaries sequentially and can resolve after a *later* tick has
+      // already landed a newer snapshot. Applying a stale backfill result
+      // then would visibly revert the score (and could re-fire a
+      // celebration next tick). Note: `$state` deep-proxies assigned
+      // objects in Svelte 5, so reading `snapshot` back afterwards returns a
+      // proxy — comparing it by identity against the raw `next` would always
+      // be false. A plain generation counter sidesteps that entirely.
+      const myGen = ++gen;
       lastSync = new Date();
       lastError = null;
       diagnostics = next._diagnostics ?? null;
       // Fire-and-forget event backfill so initial paint isn't blocked
       backfillEvents(next).then((withEvents) => {
-        if (withEvents !== next) snapshot = withEvents;
+        if (gen === myGen && withEvents !== next) snapshot = withEvents;
       }).catch(() => {});
     } catch (e) {
       lastError = e;
