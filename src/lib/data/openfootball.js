@@ -15,7 +15,10 @@ import { swr } from '../cache.js';
 const URL =
   'https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json';
 
-const TTL = 6 * 60 * 60 * 1000; // 6h — fixtures barely change
+// 1h — during the tournament results land same-day and this feed is now a
+// results fallback (see fetchOpenFootball() below), not just a schedule
+// skeleton, so it needs to refresh faster than the pre-tournament 6h TTL.
+const TTL = 60 * 60 * 1000;
 
 // Openfootball name → FIFA 3-letter code. Covers exactly the 48 teams that
 // qualify for WC2026 plus the 'Ivory Coast' / 'Côte d'Ivoire' alias.
@@ -76,6 +79,51 @@ function codeFor(name) {
   // Real team → FIFA code; otherwise pass through (placeholder like '1A',
   // 'W73', '3A/B/C/D/F', 'L101' — the bracket renders these as TBD hints).
   return NAME_TO_CODE[name] ?? name;
+}
+
+// True for a resolved FIFA code ('CAN', 'MAR', …), false for the knockout
+// placeholders ('1A', 'W73', 'L101', …) which can't have scored — used to
+// keep goal events defensive even though a `score` block should never
+// appear on an unresolved slot in practice.
+function isRealCode(code) {
+  return typeof code === 'string' && /^[A-Z]{3}$/.test(code);
+}
+
+// goals1/goals2 → `{ type: 'goal', team, player, minute }` events for one
+// side. `minute` strings look like "50", "82", "90+8" (stoppage time) —
+// parseInt happily stops at the '+' and gives us the base minute.
+// Own goals sit in the *benefiting* side's array with the opponent scorer's
+// name and `owngoal: true` — keep the goal in the timeline but drop the
+// player so topScorersFrom() can't credit it toward the golden boot.
+function goalEvents(goals, teamCode) {
+  if (!isRealCode(teamCode)) return [];
+  return (goals ?? []).map((g) => ({
+    type: 'goal',
+    team: teamCode,
+    player: g.owngoal ? null : g.name,
+    minute: parseInt(g.minute, 10) || null,
+  }));
+}
+
+// openfootball only ever publishes a `score` once the match is over (no
+// live/minute concept), so any match with a score is 'final'. `et` is the
+// final score when extra time was played; `p` is the shootout tally, only
+// present when the tie went to penalties.
+function resultFor(m, home, away) {
+  const score = m.score;
+  if (!score || (score.ft == null && score.et == null)) {
+    return { homeGoals: null, awayGoals: null, status: 'scheduled', homeShootout: null, awayShootout: null, events: [] };
+  }
+  const [homeGoals, awayGoals] = score.et ?? score.ft;
+  const [homeShootout, awayShootout] = score.p ?? [null, null];
+  return {
+    homeGoals,
+    awayGoals,
+    status: 'final',
+    homeShootout,
+    awayShootout,
+    events: [...goalEvents(m.goals1, home), ...goalEvents(m.goals2, away)],
+  };
 }
 
 function normaliseRound(round) {
@@ -162,18 +210,16 @@ export async function fetchOpenFootball() {
     const home = codeFor(m.team1?.code ?? m.team1);
     const away = codeFor(m.team2?.code ?? m.team2);
     const group = stage === 'group' ? normaliseGroup(m.group) : null;
+    const result = resultFor(m, home, away);
 
     const base = {
       id: `of-${m.num ?? `${m.date}-${home}-${away}`}`,
       utc,
       home,
       away,
-      homeGoals: null,
-      awayGoals: null,
-      status: 'scheduled',
+      ...result,
       minute: null,
       venue: m.ground ?? null,
-      events: [],
     };
 
     if (stage === 'group') {
