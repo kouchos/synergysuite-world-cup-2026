@@ -142,6 +142,49 @@ test.describe('ESPN integration', () => {
   });
 });
 
+test.describe('Knockout live-score tripwire (docs/PLAN-knockout-live-scores.md)', () => {
+  // The 4 July 2026 incident: a played knockout match (Canada v Morocco)
+  // showed as "scheduled" with a healthy-looking footer. This is the live
+  // check that would have caught it on any laptop run — deliberately does
+  // NOT skip when ESPN is unreachable, because the whole point is that the
+  // openfootball fallback (Task 3) must cover a played match either way.
+  // Scoped to knockout matches: they're the only ones openfootball tags with
+  // a stable `num`, and mergeKnockouts()'s round/pair joins are exactly the
+  // mechanism this incident was about (mergeFixtures()'s day+home+away join
+  // for group fixtures was never implicated).
+  test('every openfootball knockout match with a published score is not "scheduled" in the merged state', async () => {
+    test.skip(!openfootballReachable, 'openfootball not reachable from this network');
+
+    const ctx = await request.newContext({ ignoreHTTPSErrors: true });
+    const res = await ctx.get(OF_PROBE, { timeout: 15000 });
+    const feed = await res.json();
+    await ctx.dispose();
+
+    const scoredNums = new Set(
+      (feed.matches ?? [])
+        .filter((m) => m.num != null && m.score && (m.score.ft != null || m.score.et != null))
+        .map((m) => Number(m.num)),
+    );
+    test.skip(scoredNums.size === 0, 'no played knockout matches in the feed yet — nothing to check');
+
+    // Fresh module instance, real fetchLiveState(), real network — ESPN may
+    // or may not be reachable here, that's the point.
+    const { fetchLiveState } = await import(
+      new URL('../src/lib/data/adapter.js', import.meta.url).href + '?v=network-tripwire-' + Date.now()
+    );
+    const state = await fetchLiveState({ live: true });
+    const byNum = new Map(
+      (state.knockoutMatches ?? []).filter((m) => m.num != null).map((m) => [Number(m.num), m]),
+    );
+
+    const stillScheduled = [...scoredNums].filter((num) => byNum.get(num)?.status === 'scheduled');
+    expect(
+      stillScheduled,
+      `openfootball has a published score for knockout match(es) ${JSON.stringify(stillScheduled)} but the merged state still shows "scheduled"`,
+    ).toEqual([]);
+  });
+});
+
 test.describe('Mock-mode toggles work in live mode', () => {
   test('?mock=1 overrides live mode and loads the mid-tournament fixture', async ({ page }) => {
     await page.goto('/?mock=1');
