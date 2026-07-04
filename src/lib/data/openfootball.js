@@ -112,7 +112,7 @@ function goalEvents(goals, teamCode) {
 function resultFor(m, home, away) {
   const score = m.score;
   if (!score || (score.ft == null && score.et == null)) {
-    return { homeGoals: null, awayGoals: null, status: 'scheduled', homeShootout: null, awayShootout: null, events: [] };
+    return { homeGoals: null, awayGoals: null, status: 'scheduled', homeShootout: null, awayShootout: null, events: [], eventsSource: null };
   }
   const [homeGoals, awayGoals] = score.et ?? score.ft;
   const [homeShootout, awayShootout] = score.p ?? [null, null];
@@ -123,6 +123,9 @@ function resultFor(m, home, away) {
     homeShootout,
     awayShootout,
     events: [...goalEvents(m.goals1, home), ...goalEvents(m.goals2, away)],
+    // Tells the adapter's backfillEvents() these are fallback goal lists (no
+    // cards) — an ESPN summary, when reachable, should still replace them.
+    eventsSource: 'baseline',
   };
 }
 
