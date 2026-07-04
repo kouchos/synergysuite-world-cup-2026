@@ -105,6 +105,26 @@
     if (!store.lastSync) return 'no sync yet';
     return `synced ${store.lastSync.toLocaleTimeString('en-IE', { timeZone: 'Europe/Dublin' })}`;
   });
+
+  // Footer tripwire for the 4 July silent-drop incident: if the adapter ever
+  // fails to join an ESPN knockout event onto the bracket, or sees a team
+  // abbreviation it doesn't recognise, that must be visible on the TV within
+  // one poll cycle — not just in a console nobody's watching. See
+  // src/lib/data/adapter.js `_diagnostics.droppedKnockoutEvents`/`unknownCodes`.
+  const dropWarning = $derived.by(() => {
+    const d = store.diagnostics;
+    const dropped = d?.droppedKnockoutEvents ?? [];
+    const unknown = d?.unknownCodes ?? [];
+    if (!dropped.length && !unknown.length) return null;
+    const parts = [];
+    if (dropped.length) parts.push(`${dropped.length} match${dropped.length === 1 ? '' : 'es'} unmatched`);
+    if (unknown.length) parts.push(`${unknown.length} unknown code${unknown.length === 1 ? '' : 's'}`);
+    const detail = [
+      ...dropped.map((e) => `${e.name} (${e.round}): ${e.reason}`),
+      ...unknown.map((c) => `unknown team code: ${c}`),
+    ].join('\n');
+    return { label: parts.join(' · '), detail };
+  });
 </script>
 
 <div class="min-h-screen flex flex-col">
@@ -190,6 +210,9 @@
       {/if}
       {#if store.lastError}
         <span class="text-live/90" title={String(store.lastError)}>· using cached data</span>
+      {/if}
+      {#if dropWarning}
+        <span class="text-live/90" title={dropWarning.detail}>· {dropWarning.label}</span>
       {/if}
       <span class="tnum">{sourceLabel} · {syncLabel}</span>
     </div>
