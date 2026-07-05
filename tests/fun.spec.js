@@ -1,7 +1,14 @@
 // The fun stuff: Banter Banner, derby detection, goal celebrations.
 // Unit tests run node-side against the pure modules; UI tests use mocks.
 import { test, expect } from '@playwright/test';
-import { banterLines, englandLines } from '../src/lib/state/banter.js';
+import {
+  banterLines,
+  englandLines,
+  injectEnglandSnark,
+  englandGoalQuip,
+  englandLostMatch,
+  englandExitRoast,
+} from '../src/lib/state/banter.js';
 import { detectGoals } from '../src/lib/state/goalDiff.js';
 import { MOCK_STATE } from '../src/lib/data/mock.js';
 import employeesConfig from '../config/employees.json' with { type: 'json' };
@@ -70,6 +77,105 @@ test.describe('banterLines', () => {
     expect(lines.join('\n')).not.toMatch(/cards table/);
     // The England fallback never sleeps
     expect(lines.join('\n')).toContain("it's not coming home");
+  });
+});
+
+test.describe('England commentary snark', () => {
+  // A fake ESPN-style feed, newest first: sequences n..1.
+  const feed = (n) =>
+    Array.from({ length: n }, (_, i) => ({
+      sequence: n - i,
+      clock: `${n - i}'`,
+      text: `Real comment ${n - i}`,
+      kind: null,
+    }));
+
+  test('injects one snarky entry per 5–8 real comments', () => {
+    const out = injectEnglandSnark(feed(40), 'r16-2');
+    const snark = out.filter((c) => c.kind === 'snark');
+    expect(snark.length).toBeGreaterThanOrEqual(Math.floor(40 / 8));
+    expect(snark.length).toBeLessThanOrEqual(Math.floor(40 / 5));
+    // Every gap between snark entries is 5–8 real comments (oldest first).
+    const gaps = [];
+    let run = 0;
+    for (const c of [...out].reverse()) {
+      if (c.kind === 'snark') {
+        gaps.push(run);
+        run = 0;
+      } else run += 1;
+    }
+    for (const g of gaps) {
+      expect(g).toBeGreaterThanOrEqual(5);
+      expect(g).toBeLessThanOrEqual(8);
+    }
+    // Real commentary all survives, in order.
+    expect(out.filter((c) => c.kind !== 'snark').map((c) => c.text)).toEqual(
+      feed(40).map((c) => c.text),
+    );
+  });
+
+  test('placement is stable as a live feed grows from the top', () => {
+    const early = injectEnglandSnark(feed(20), 'r16-2');
+    const later = injectEnglandSnark(feed(33), 'r16-2');
+    // The oldest stretch of the bigger feed is identical to the smaller run —
+    // snark never reshuffles under the reader mid-match.
+    expect(later.slice(-early.length).map((c) => c.text)).toEqual(early.map((c) => c.text));
+  });
+
+  test('goal quips are deterministic per goal', () => {
+    const kane = { type: 'goal', team: 'ENG', player: 'Harry Kane', minute: 55 };
+    const quip = englandGoalQuip(kane, 'r16-2');
+    expect(quip.length).toBeGreaterThan(0);
+    expect(englandGoalQuip(kane, 'r16-2')).toBe(quip);
+    // A different goal can (and here does) draw a different quip
+    const jude = { type: 'goal', team: 'ENG', player: 'Jude Bellingham', minute: 78 };
+    expect(englandGoalQuip(jude, 'r16-2')).not.toBe(quip);
+  });
+});
+
+test.describe('England knocked out', () => {
+  const qfLoss = {
+    id: 'qf-1',
+    round: 'QF',
+    utc: '2026-07-10T20:00:00Z',
+    home: 'NED',
+    away: 'ENG',
+    homeGoals: 2,
+    awayGoals: 1,
+    status: 'final',
+  };
+
+  test('englandLostMatch spots regulation and shootout defeats, not wins or draws', () => {
+    expect(englandLostMatch(qfLoss)).toBe(true);
+    expect(englandLostMatch({ ...qfLoss, homeGoals: 0, awayGoals: 1 })).toBe(false);
+    // The classic: level after extra time, out on pens
+    expect(
+      englandLostMatch({ ...qfLoss, homeGoals: 1, awayGoals: 1, homeShootout: 4, awayShootout: 3 }),
+    ).toBe(true);
+    expect(
+      englandLostMatch({ ...qfLoss, homeGoals: 1, awayGoals: 1, homeShootout: 2, awayShootout: 4 }),
+    ).toBe(false);
+    // Still live / not England → no verdict
+    expect(englandLostMatch({ ...qfLoss, status: 'live' })).toBe(false);
+    expect(englandLostMatch({ ...qfLoss, away: 'GER' })).toBe(false);
+  });
+
+  test('the exit roast sings them onto the plane', () => {
+    const roast = englandExitRoast(qfLoss, employees);
+    expect(roast.headline).toBe("They're going home, they're going home, England's going home!");
+    const all = roast.lines.join('\n');
+    expect(all).toMatch(/years of hurt/);
+    expect(all).toMatch(/Sweet Caroline/);
+    expect(all).toMatch(/Nessun Dorma/);
+    expect(all).toMatch(/quarter-final/);
+    // England's owner gets their condolences
+    expect(all).toMatch(/Condolences to/);
+  });
+
+  test('a shootout exit gets the penalties treatment, a win gets nothing', () => {
+    const pens = { ...qfLoss, homeGoals: 1, awayGoals: 1, homeShootout: 4, awayShootout: 3 };
+    expect(englandExitRoast(pens, employees).lines[0]).toMatch(/penalties.*traditions/i);
+    expect(englandExitRoast({ ...qfLoss, homeGoals: 0, awayGoals: 3 }, employees)).toBeNull();
   });
 });
 
@@ -174,6 +280,35 @@ test.describe('Derby detection UI', () => {
     const normalCard = page.locator('div.card').filter({ hasText: 'Spain' }).filter({ hasText: 'Sweden' });
     await normalCard.getByRole('button', { name: /4.+1/ }).click();
     await expect(page.getByRole('dialog').getByText('Sweepstake derby')).not.toBeVisible();
+  });
+});
+
+test.describe('England key-moment digs UI', () => {
+  test("the game modal appends a bracketed dig to England goals only", async ({ page }) => {
+    // Pin the clock to just after the mock's Japan–England R16 game so the
+    // recap route to the game modal stays open regardless of the real date.
+    await page.clock.setFixedTime(new Date('2026-07-06T12:00:00Z'));
+    await page.goto('/?mock=1');
+    // Reach the Japan–England R16 game via the recap feed
+    await page.locator('footer').getByRole('button', { name: /recap of the last 48 hours/i }).click();
+    await page
+      .getByRole('dialog')
+      .locator('button')
+      .filter({ hasText: 'Japan' })
+      .filter({ hasText: 'England' })
+      .click();
+    // The recap card stays in the DOM behind the game modal — scope all
+    // assertions to the game modal's Key events section.
+    await expect(page.getByRole('heading', { name: 'Match report' })).toBeVisible();
+    const events = page
+      .getByRole('dialog')
+      .locator('section')
+      .filter({ has: page.getByRole('heading', { name: 'Key events' }) });
+    await expect(events.getByText('Harry Kane')).toBeVisible();
+    // Two England goals → two italic digs; Kubo's goal gets none
+    const digs = events.locator('span.italic');
+    await expect(digs).toHaveCount(2);
+    await expect(digs.first()).toContainText(/^\(.+\)$/);
   });
 });
 

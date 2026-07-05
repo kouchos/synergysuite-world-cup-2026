@@ -36,7 +36,177 @@ const ENGLAND_EVERGREEN = [
   'Jude Bellingham carrying ten lads who think the hard work is the celebration',
   'It is statistically more likely to rain in Manchester than for England to win a shootout',
   'The only thing coming home is the squad, early, again',
+  "England's tactical masterplan: hoof it long, look surprised, blame the pitch",
+  "'It's Coming Home' has been on repeat since 1996 — thirty years of false advertising",
+  'England win every pre-tournament press conference and lose every semi-final that matters',
+  "England's penalty practice: extensive, famous, completely useless",
+  'The wall chart says England, the history books say Germany on penalties',
+  'If passion won trophies England would have fifteen. It does not, and they have one',
+  'New tournament, new kit, same England',
+  "England sing the anthem like they've already won — then the football starts",
+  'The Three Lions have seen things. Mostly penalty misses, in slow motion, on ITV',
+  "England invented football specifically so everyone else could beat them at it",
 ];
+
+/**
+ * Snarky interjections for the live-commentary feed of England games — written
+ * to read like a rogue co-commentator who has wandered in from an Irish pub.
+ * Woven in by injectEnglandSnark() at a rate of one per 5–8 real entries.
+ */
+const COMMENTARY_SNARK = [
+  "Meanwhile, the England fans have started singing about it coming home. Historians remain sceptical.",
+  "Tactical update: England have switched from a 4-2-3-1 to a state of mild national panic.",
+  "England knock it sideways. And backwards. And sideways again. Progress, of a very English sort.",
+  "A reminder for viewers just joining: England have won exactly one World Cup, and it predates colour television.",
+  "VAR is currently checking whether England are any good. The check is complete. Play on.",
+  "The England bench looks nervous. The fans look nervous. The pigeons above the stadium look nervous.",
+  "'Sixty years of hurt' is trending again. It trends every four years, like clockwork.",
+  "Somewhere in Dublin, an entire office is watching this with a very large bag of popcorn.",
+  "The BBC montage team are on standby. They are always on standby. They know.",
+  "England's game plan appears to be 1966 nostalgia delivered at walking pace.",
+  "Sweet Caroline is warming up in the stands — a song about clinging to hope. Fitting.",
+  "The England manager scribbles furiously in his notebook. Sources say it just reads 'help'.",
+  "Stat attack: England are unbeaten in World Cups they have won.",
+  "The Three Lions on the shirt exchange a knowing look. They've been here before.",
+];
+
+/** Bracketed digs appended to England goals in the key-events feeds. */
+const ENGLAND_GOAL_QUIPS = [
+  'probably offside',
+  'VAR is having a look, live in hope',
+  'scored against the run of history',
+  "that's the peak — downhill from here",
+  'BBC montage intensifies',
+  "calm down, it's still not coming home",
+  '1966 flashbacks incoming',
+  "they'll still find a way to ruin this",
+  'even a broken clock',
+  'the pubs of Ireland fall briefly silent',
+];
+
+/** Cheap deterministic hash → 32-bit uint, for stable snark placement. */
+function hashString(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i += 1) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/** Tiny seeded PRNG (mulberry32) so the snark rate is random-ish but stable. */
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export function isEnglandMatch(match) {
+  return match?.home === 'ENG' || match?.away === 'ENG';
+}
+
+/**
+ * Weave snarky anti-England interjections into a commentary feed at a rate of
+ * one per 5–8 real entries. The feed arrives newest-first and grows from the
+ * top during live games, so placement is computed from the oldest entry up —
+ * that way already-placed snark never moves or reshuffles as new commentary
+ * lands. Fully deterministic per match id.
+ */
+export function injectEnglandSnark(items, matchId) {
+  if (!items?.length) return items ?? [];
+  const rand = mulberry32(hashString(String(matchId ?? 'ENG')));
+  const nextGap = () => 5 + Math.floor(rand() * 4); // 5–8 real comments per snark
+  let snarkIdx = Math.floor(rand() * COMMENTARY_SNARK.length);
+  let gap = nextGap();
+  let sinceSnark = 0;
+  const out = [];
+  // Oldest → newest so positions are append-only, then flip back.
+  for (const item of [...items].reverse()) {
+    out.push(item);
+    sinceSnark += 1;
+    if (sinceSnark >= gap) {
+      out.push({
+        sequence: `snark-${out.length}`,
+        clock: '🎙️',
+        text: COMMENTARY_SNARK[snarkIdx % COMMENTARY_SNARK.length],
+        kind: 'snark',
+      });
+      snarkIdx += 1;
+      sinceSnark = 0;
+      gap = nextGap();
+    }
+  }
+  return out.reverse();
+}
+
+/**
+ * The bracketed jab for an England goal in the key-events feeds —
+ * "55' Kane (probably offside)". Deterministic per goal so it doesn't
+ * change on re-render.
+ */
+export function englandGoalQuip(ev, matchId) {
+  const key = `${matchId ?? ''}:${ev?.minute ?? ''}:${ev?.player ?? ''}`;
+  return ENGLAND_GOAL_QUIPS[hashString(key) % ENGLAND_GOAL_QUIPS.length];
+}
+
+/** Did England lose this (finished) match — on goals or, classically, on pens? */
+export function englandLostMatch(m) {
+  if (!isEnglandMatch(m) || m.status !== 'final' || m.homeGoals == null) return false;
+  const gf = m.home === 'ENG' ? m.homeGoals : m.awayGoals;
+  const ga = m.home === 'ENG' ? m.awayGoals : m.homeGoals;
+  if (gf !== ga) return gf < ga;
+  if (m.homeShootout == null || m.awayShootout == null) return false;
+  const sf = m.home === 'ENG' ? m.homeShootout : m.awayShootout;
+  const sa = m.home === 'ENG' ? m.awayShootout : m.homeShootout;
+  return sf < sa;
+}
+
+const EXIT_ROUND_LABELS = {
+  R32: 'the round of 32',
+  R16: 'the round of 16',
+  QF: 'a quarter-final',
+  SF: 'a semi-final',
+  Third: 'the third-place playoff',
+  Final: 'the final',
+};
+
+/**
+ * The full send-off for when England get knocked out — an over-the-top roast
+ * for the recap dialog. Returns { headline, chant, lines } or null if the
+ * match isn't actually an England knockout defeat.
+ */
+export function englandExitRoast(match, employees) {
+  if (!englandLostMatch(match)) return null;
+  const opp = teamFor(match.home === 'ENG' ? match.away : match.home);
+  const gf = match.home === 'ENG' ? match.homeGoals : match.awayGoals;
+  const ga = match.home === 'ENG' ? match.awayGoals : match.homeGoals;
+  const onPens = gf === ga;
+  const round = EXIT_ROUND_LABELS[match.round] ?? 'the knockouts';
+  const owner = teamOwner('ENG', employees);
+  const years = new Date().getFullYear() - 1966;
+
+  const lines = [
+    onPens
+      ? `Beaten by ${opp.name} on penalties in ${round} — some traditions really are sacred`
+      : `Beaten ${ga}–${gf} by ${opp.name} in ${round} — the Three Lions are now three lads in the Heathrow arrivals lounge`,
+    `${years} years of hurt just signed a four-year extension. See you in 2030 for the exact same montage`,
+    'The BBC package is ready: slow-motion tears, Nessun Dorma, a shot of a sad man in a waistcoat, roll credits',
+    "Sweet Caroline has left the building. Good times never seemed so gone",
+    "Football's coming home — via a connecting flight, without the trophy, in economy",
+    'The wall charts of England can now be recycled responsibly. Please remove the drawing pins first',
+  ];
+  if (owner) lines.push(`Condolences to ${owner.name}, who drew England and therefore never had a chance`);
+
+  return {
+    headline: "They're going home, they're going home, England's going home!",
+    chant: '🏴\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F} ✈️ 🏠',
+    lines,
+  };
+}
 
 function allMatches(state) {
   return [...(state.fixtures ?? []), ...(state.knockoutMatches ?? [])];
@@ -92,6 +262,9 @@ export function englandLines(state, employees) {
   // Plus a rotating evergreen jab, kept fresh by the day of the tournament.
   const pick = ENGLAND_EVERGREEN[new Date().getDate() % ENGLAND_EVERGREEN.length];
   lines.push(pick);
+  // And the running tally since Wembley, 30 July 1966. Who's counting? We are.
+  const days = Math.floor((Date.now() - Date.UTC(1966, 6, 30)) / 86_400_000);
+  lines.push(`Day ${days.toLocaleString('en-IE')} of England not winning a World Cup — but who's counting`);
   return lines;
 }
 

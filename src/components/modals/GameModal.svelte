@@ -6,6 +6,7 @@
   import { swr } from '../../lib/cache.js';
   import { modal } from '../../lib/state/modal.svelte.js';
   import { store } from '../../lib/state/store.svelte.js';
+  import { injectEnglandSnark, englandGoalQuip, isEnglandMatch } from '../../lib/state/banter.js';
   import Modal from '../Modal.svelte';
   import PlayerCard from '../PlayerCard.svelte';
   import NewsList from '../NewsList.svelte';
@@ -89,7 +90,7 @@
   }
   const commentary = $derived.by(() => {
     const raw = summary?.commentary ?? summary?.gamepackageJSON?.commentary ?? [];
-    return raw
+    const feed = raw
       .map((c, i) => ({
         sequence: Number(c?.sequence ?? c?.play?.sequenceNumber ?? i),
         clock: c?.time?.displayValue ?? c?.play?.clock?.displayValue ?? '',
@@ -99,6 +100,9 @@
       .filter((c) => c.text)
       .sort((a, b) => b.sequence - a.sequence) // newest first, live-feed style
       .slice(0, 300);
+    // England games get a rogue co-commentator: one snarky interjection per
+    // 5–8 real entries, stable across live refreshes.
+    return isEnglandMatch(match) ? injectEnglandSnark(feed, match.id) : feed;
   });
 
   let activeTab = $state('events');
@@ -341,6 +345,9 @@
                 <span class="flex-1 {onHome ? 'text-left' : 'text-right'}">
                   <span class="font-semibold">{ev.player}</span>
                   <span class="text-fg-faint ml-2">({TEAMS[ev.team]?.name ?? ev.team})</span>
+                  {#if ev.type === 'goal' && ev.team === 'ENG'}
+                    <span class="text-fg-faint italic ml-1.5">({englandGoalQuip(ev, match.id)})</span>
+                  {/if}
                 </span>
               </div>
             {/each}
@@ -405,9 +412,10 @@
               <div class="flex gap-3 px-3 py-2 rounded-md text-sm leading-snug
                 {c.kind === 'goal' ? 'bg-volt/10 border-l-2 border-volt' :
                  c.kind === 'red' ? 'bg-live/10 border-l-2 border-live' :
-                 c.kind === 'yellow' ? 'bg-gold/10 border-l-2 border-gold' : 'odd:bg-ink-3/50'}">
+                 c.kind === 'yellow' ? 'bg-gold/10 border-l-2 border-gold' :
+                 c.kind === 'snark' ? 'bg-gold/5 border-l-2 border-dashed border-gold/50' : 'odd:bg-ink-3/50'}">
                 <span class="w-11 shrink-0 text-right text-fg-faint tnum type-display text-xs pt-0.5">{c.clock}</span>
-                <span class="{c.kind === 'goal' ? 'text-fg font-semibold' : 'text-fg-mute'}">{c.text}</span>
+                <span class="{c.kind === 'goal' ? 'text-fg font-semibold' : c.kind === 'snark' ? 'text-fg-mute italic' : 'text-fg-mute'}">{c.text}</span>
               </div>
             {/each}
           </div>
