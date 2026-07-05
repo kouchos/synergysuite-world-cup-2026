@@ -17,19 +17,30 @@
   const team = $derived(c && TEAMS[c.team] ? teamFor(c.team) : null);
   const ht = $derived(c?.match?.home && TEAMS[c.match.home] ? teamFor(c.match.home) : null);
   const at = $derived(c?.match?.away && TEAMS[c.match.away] ? teamFor(c.match.away) : null);
-  const accent = $derived(c?.owner?.color ?? '#c8f542');
+
+  // Editorial policy (see banter.js): England goals are celebrated in
+  // greyscale with a sad trombone; England *conceding* is a bonus party.
+  const isEngland = $derived(c?.team === 'ENG');
+  const englandConceded = $derived(
+    !!c && c.team !== 'ENG' && (c.match?.home === 'ENG' || c.match?.away === 'ENG'),
+  );
+  const accent = $derived(isEngland ? '#9ca3af' : (c?.owner?.color ?? '#c8f542'));
 
   const CONFETTI_COLORS = ['#c8f542', '#f2c14e', '#f2f4f8'];
+  const GREY_CONFETTI = ['#6b7280', '#9ca3af', '#4b5563'];
   const pieces = $derived.by(() => {
     if (!c || reducedMotion) return [];
-    return Array.from({ length: 60 }, (_, i) => ({
+    const palette = isEngland ? GREY_CONFETTI : CONFETTI_COLORS;
+    // England conceding earns half again as much confetti as a normal goal.
+    const count = englandConceded ? 90 : 60;
+    return Array.from({ length: count }, (_, i) => ({
       i,
       left: Math.random() * 100,
       delay: Math.random() * 0.9,
       fall: 2 + Math.random() * 1.6,
       drift: (Math.random() - 0.5) * 30,
       size: 6 + Math.random() * 7,
-      color: i % 3 === 0 ? accent : CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+      color: i % 3 === 0 ? accent : palette[i % palette.length],
     }));
   });
 </script>
@@ -73,9 +84,17 @@
     <div class="text-center px-6" in:scale={{ duration: dur(300), start: 0.7 }}>
       <div class="type-display leading-none text-[clamp(4rem,16vw,9rem)]" style:color={accent}>GOAL!</div>
       <div class="mt-4 flex items-center justify-center gap-3">
-        <span class="text-5xl sm:text-6xl leading-none" aria-hidden="true">{team.flag}</span>
+        <span class="text-5xl sm:text-6xl leading-none {isEngland ? 'grayscale' : ''}" aria-hidden="true">{team.flag}</span>
         <span class="type-display text-3xl sm:text-5xl leading-[0.9]">{team.name}</span>
       </div>
+      {#if isEngland}
+        <div class="mt-2.5 text-sm sm:text-base italic text-fg-mute">(the air horn has declined to comment)</div>
+      {/if}
+      {#if englandConceded}
+        <div class="mt-4 inline-flex items-center gap-2.5 rounded-md border border-gold/45 bg-gold/12 px-4 py-2 type-display text-gold text-lg sm:text-xl">
+          🍻 England conceded — the office celebrates
+        </div>
+      {/if}
       {#if ht && at && c.match.homeGoals != null}
         <div class="mt-4 type-display text-2xl sm:text-3xl tnum text-fg">
           {ht.flag} {c.match.homeGoals}<span class="text-fg-faint mx-1.5 not-italic">–</span>{c.match.awayGoals} {at.flag}

@@ -153,6 +153,25 @@ export function englandGoalQuip(ev, matchId) {
   return ENGLAND_GOAL_QUIPS[hashString(key) % ENGLAND_GOAL_QUIPS.length];
 }
 
+/**
+ * Shootout watch 🚨 — a live England knockout tie, level from the 80th minute
+ * on, means penalties are coming and everybody knows how that ends. Returns
+ * the klaxon line, or null when the nation can relax (relatively speaking).
+ */
+export function englandPenaltyWatch(state) {
+  const tie = (state.knockoutMatches ?? []).find(
+    (m) =>
+      m.status === 'live' &&
+      isEnglandMatch(m) &&
+      m.homeGoals != null &&
+      m.homeGoals === m.awayGoals &&
+      (m.minute ?? 0) >= 80,
+  );
+  if (!tie) return null;
+  const opp = teamFor(tie.home === 'ENG' ? tie.away : tie.home);
+  return `🚨 SHOOTOUT WATCH: England level with ${opp.name} at ${tie.minute}' — penalties probability climbing to 100%, England survival probability: historical`;
+}
+
 /** Did England lose this (finished) match — on goals or, classically, on pens? */
 export function englandLostMatch(m) {
   if (!isEnglandMatch(m) || m.status !== 'final' || m.homeGoals == null) return false;
@@ -387,5 +406,13 @@ export function banterLines(state, employees) {
     if (engQueue.length) weighted.push(engQueue.shift());
     weighted.push(...general.splice(0, 2));
   }
-  return weighted;
+
+  // ── Shootout watch overrides everything — the klaxon is every other line ──
+  const watch = englandPenaltyWatch(state);
+  if (!watch) return weighted;
+  const alarmed = [];
+  for (let i = 0; i < weighted.length; i += 2) {
+    alarmed.push(watch, ...weighted.slice(i, i + 2));
+  }
+  return alarmed.length ? alarmed : [watch];
 }

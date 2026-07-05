@@ -8,6 +8,7 @@ import {
   englandGoalQuip,
   englandLostMatch,
   englandExitRoast,
+  englandPenaltyWatch,
 } from '../src/lib/state/banter.js';
 import { detectGoals } from '../src/lib/state/goalDiff.js';
 import { MOCK_STATE } from '../src/lib/data/mock.js';
@@ -130,6 +131,44 @@ test.describe('England commentary snark', () => {
     // A different goal can (and here does) draw a different quip
     const jude = { type: 'goal', team: 'ENG', player: 'Jude Bellingham', minute: 78 };
     expect(englandGoalQuip(jude, 'r16-2')).not.toBe(quip);
+  });
+});
+
+test.describe('England penalty watch', () => {
+  const tie = (overrides = {}) => ({
+    id: 'qf-1',
+    round: 'QF',
+    status: 'live',
+    home: 'ENG',
+    away: 'GER',
+    homeGoals: 1,
+    awayGoals: 1,
+    minute: 85,
+    ...overrides,
+  });
+
+  test('sounds the klaxon for a level England knockout tie from 80 minutes', () => {
+    const line = englandPenaltyWatch({ knockoutMatches: [tie()] });
+    expect(line).toMatch(/SHOOTOUT WATCH/);
+    expect(line).toMatch(/level with Germany at 85'/);
+    expect(line).toMatch(/survival probability: historical/);
+  });
+
+  test('stays quiet before the 80th, when England lead or trail, and in group games', () => {
+    expect(englandPenaltyWatch({ knockoutMatches: [tie({ minute: 70 })] })).toBeNull();
+    expect(englandPenaltyWatch({ knockoutMatches: [tie({ homeGoals: 2 })] })).toBeNull();
+    expect(englandPenaltyWatch({ knockoutMatches: [tie({ status: 'final' })] })).toBeNull();
+    // A level group game at 85' is just a draw, not a shootout
+    expect(englandPenaltyWatch({ fixtures: [tie({ id: 'g-1' })], knockoutMatches: [] })).toBeNull();
+  });
+
+  test('the klaxon dominates the banter rotation while active', () => {
+    const state = { ...MOCK_STATE, knockoutMatches: [...MOCK_STATE.knockoutMatches, tie({ id: 'qf-watch' })] };
+    const lines = banterLines(state, employees);
+    expect(lines[0]).toMatch(/SHOOTOUT WATCH/);
+    // Every other line is the klaxon — it appears at least a third of the time
+    const klaxons = lines.filter((l) => /SHOOTOUT WATCH/.test(l)).length;
+    expect(klaxons).toBeGreaterThanOrEqual(Math.floor(lines.length / 3));
   });
 });
 
@@ -344,5 +383,67 @@ test.describe('Goal celebration', () => {
     await expect(overlay.getByText('Hazel')).toBeVisible(); // owner badge
     await overlay.click();
     await expect(overlay).not.toBeVisible();
+  });
+
+  test('an England goal celebrates in grey with the horn declining to comment', async ({ page }) => {
+    await page.goto('/?mock=1&demo=goal-eng');
+    const overlay = page.getByRole('button', { name: 'Dismiss goal celebration' });
+    await expect(overlay).toBeVisible({ timeout: 5000 });
+    await expect(overlay.getByText('England')).toBeVisible();
+    // The accent goes greyscale (#9ca3af) instead of the owner's colour
+    await expect(overlay.getByText('GOAL!')).toHaveCSS('color', 'rgb(156, 163, 175)');
+    await expect(overlay.getByText('(the air horn has declined to comment)')).toBeVisible();
+    // No office party for an England goal
+    await expect(overlay.getByText(/England conceded/)).not.toBeVisible();
+  });
+
+  test('England conceding throws the office party overlay', async ({ page }) => {
+    await page.goto('/?mock=1&demo=concede');
+    const overlay = page.getByRole('button', { name: 'Dismiss goal celebration' });
+    await expect(overlay).toBeVisible({ timeout: 5000 });
+    // The scorer is England's opponent in the mock R32 tie (Bosnia)
+    await expect(overlay.getByText('GOAL!')).toBeVisible();
+    await expect(overlay.getByText('England conceded — the office celebrates')).toBeVisible();
+    await expect(overlay.getByText('(the air horn has declined to comment)')).not.toBeVisible();
+  });
+});
+
+test.describe('1966 mode', () => {
+  test('?era=1966 renders England matches in monochrome, everything else in colour', async ({ page }) => {
+    await page.goto('/?mock=1&era=1966');
+    await page.getByRole('button', { name: 'Knockout ladder' }).click();
+    // England appear twice in the mock bracket (R32 v BIH, R16 v JPN)
+    const retro = page.locator('.era-1966');
+    await expect(retro).toHaveCount(2);
+    await expect(retro.first()).toHaveCSS('filter', /grayscale\(1\)/);
+    // England-free ties stay in colour
+    const espArg = page.locator('.bracket-cell').filter({ hasText: 'ESP' }).filter({ hasText: 'ARG' });
+    await expect(espArg.first()).not.toHaveClass(/era-1966/);
+  });
+
+  test('without the query param the world stays in colour', async ({ page }) => {
+    await page.goto('/?mock=1');
+    await page.getByRole('button', { name: 'Knockout ladder' }).click();
+    await expect(page.locator('.bracket-cell').first()).toBeVisible();
+    await expect(page.locator('.era-1966')).toHaveCount(0);
+  });
+});
+
+test.describe('England trophy cabinet', () => {
+  test("the team modal lists England's expired silverware", async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-07-06T12:00:00Z'));
+    await page.goto('/?mock=1');
+    // Recap → Japan–England game modal → England team modal
+    await page.locator('footer').getByRole('button', { name: /recap of the last 48 hours/i }).click();
+    await page
+      .getByRole('dialog')
+      .locator('button')
+      .filter({ hasText: 'Japan' })
+      .filter({ hasText: 'England' })
+      .click();
+    await expect(page.getByRole('heading', { name: 'Match report' })).toBeVisible();
+    await page.getByRole('dialog').getByRole('button', { name: /England/ }).last().click();
+    await expect(page.getByRole('heading', { name: 'England' })).toBeVisible();
+    await expect(page.getByText('🏆 Trophy cabinet: 1 (expired 1966)')).toBeVisible();
   });
 });

@@ -156,6 +156,12 @@
         {#if standing}<span class="text-fg-faint"> · Group {standing.groupId}</span>{/if}
       </div>
       <div class="type-display text-3xl sm:text-4xl leading-[0.9]">{team.name}</div>
+      {#if code === 'ENG'}
+        <!-- Editorial policy (see banter.js): England never escape the record -->
+        <div class="mt-1.5 type-kicker text-gold" title="Last polished: 30 July 1966">
+          🏆 Trophy cabinet: 1 (expired 1966)
+        </div>
+      {/if}
       {#if owner}
         <button
           type="button"

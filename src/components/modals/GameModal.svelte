@@ -7,6 +7,7 @@
   import { modal } from '../../lib/state/modal.svelte.js';
   import { store } from '../../lib/state/store.svelte.js';
   import { injectEnglandSnark, englandGoalQuip, isEnglandMatch } from '../../lib/state/banter.js';
+  import { inMonochrome } from '../../lib/state/era.js';
   import Modal from '../Modal.svelte';
   import PlayerCard from '../PlayerCard.svelte';
   import NewsList from '../NewsList.svelte';
@@ -214,7 +215,10 @@
 {#if match}
   <Modal {title} accentColor={accent}>
     <!-- Hero: home crest score away crest -->
-    <section class="card clip-corner p-5 sm:p-6 mb-5">
+    <section
+      class="card clip-corner p-5 sm:p-6 mb-5 {inMonochrome(match) ? 'era-1966' : ''}"
+      title={inMonochrome(match) ? 'Broadcast in glorious 1966 monochrome' : undefined}
+    >
       <div class="flex items-center justify-between gap-2 sm:gap-4">
         <!-- Home -->
         <button
