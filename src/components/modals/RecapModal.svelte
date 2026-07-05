@@ -2,6 +2,7 @@
   import { teamFor, TEAMS } from '../../lib/data/teams.js';
   import { formatKickoff } from '../../lib/format.js';
   import { recapSince } from '../../lib/state/recap.js';
+  import { englandGoalQuip } from '../../lib/state/banter.js';
   import { teamOwner } from '../../lib/state/prizes.js';
   import { modal } from '../../lib/state/modal.svelte.js';
   import { store } from '../../lib/state/store.svelte.js';
@@ -99,6 +100,9 @@
                       </span>
                       <span class="truncate {onHome ? '' : 'text-right'}">
                         <span class="font-medium">{ev.player ?? 'Unknown'}</span>
+                        {#if ev.type === 'goal' && ev.team === 'ENG'}
+                          <span class="text-fg-faint italic">({englandGoalQuip(ev, m.id)})</span>
+                        {/if}
                       </span>
                     </div>
                   {/each}
@@ -144,7 +148,21 @@
       </section>
     {/if}
 
-    {#if recap.england}
+    {#if recap.englandOut}
+      <!-- England are out: the recap drops all pretence of neutrality -->
+      <section class="mb-5 card clip-corner p-5 border border-gold/40 bg-gold/5 text-center">
+        <div class="text-4xl mb-2" aria-hidden="true">{recap.englandOut.chant}</div>
+        <h3 class="type-display text-xl sm:text-2xl text-gold leading-tight mb-1">
+          🎶 {recap.englandOut.headline} 🎶
+        </h3>
+        <p class="type-kicker text-fg-faint mb-4">A SynergySweep special send-off</p>
+        <ul class="space-y-2 text-left">
+          {#each recap.englandOut.lines as line (line)}
+            <li class="text-sm text-fg-mute border-l-2 border-gold/40 pl-3">{line}</li>
+          {/each}
+        </ul>
+      </section>
+    {:else if recap.england}
       <p class="mb-5 text-sm text-fg-mute italic border-l-2 border-gold/40 pl-3">
         Meanwhile: {recap.england}
       </p>

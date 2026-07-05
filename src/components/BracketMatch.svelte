@@ -3,8 +3,10 @@
   import { formatTime } from '../lib/format.js';
   import { modal } from '../lib/state/modal.svelte.js';
   import { store } from '../lib/state/store.svelte.js';
+  import { inMonochrome } from '../lib/state/era.js';
 
   let { match, employees } = $props();
+  const monochrome = $derived(inMonochrome(match));
 
   function ownerOf(code) {
     if (!code || !TEAMS[code]) return null;
@@ -56,8 +58,9 @@
 
 <div
   class="bracket-cell relative rounded-md overflow-hidden card lift transition-colors
-    {isLive ? 'border-live/70 shadow-[0_0_14px_rgba(255,77,93,0.22)]' : ''}"
+    {isLive ? 'border-live/70 shadow-[0_0_14px_rgba(255,77,93,0.22)]' : ''} {monochrome ? 'era-1966' : ''}"
   data-live={isLive || undefined}
+  title={monochrome ? 'Broadcast in glorious 1966 monochrome' : undefined}
 >
   <!-- Home row -->
   <div class="flex items-center h-[26px] pr-1 {homeWon ? 'bg-volt/8' : ''}">

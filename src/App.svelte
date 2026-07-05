@@ -66,8 +66,11 @@
   onMount(() => {
     store.start();
     // ?demo=goal — fire a sample celebration so the flash can be shown off
-    // (and tested) without waiting for a live goal.
-    if (new URLSearchParams(window.location.search).get('demo') === 'goal') {
+    // (and tested) without waiting for a live goal. ?demo=goal-eng previews
+    // the greyscale England celebration; ?demo=concede the England-conceded
+    // office party.
+    const demoParam = new URLSearchParams(window.location.search).get('demo');
+    if (demoParam === 'goal') {
       const demo = (store.state.fixtures ?? []).find((f) => f.status === 'live') ?? store.state.fixtures?.[0];
       if (demo) {
         setTimeout(() => {
@@ -76,6 +79,21 @@
             team: demo.home,
             count: 1,
             owner: store.employees.find((e) => e.teams.some((t) => t.fifaCode === demo.home)) ?? null,
+          });
+        }, 800);
+      }
+    } else if (demoParam === 'goal-eng' || demoParam === 'concede') {
+      const eng = [...(store.state.fixtures ?? []), ...(store.state.knockoutMatches ?? [])].find(
+        (m) => (m.home === 'ENG' || m.away === 'ENG') && m.homeGoals != null,
+      );
+      if (eng) {
+        const team = demoParam === 'goal-eng' ? 'ENG' : eng.home === 'ENG' ? eng.away : eng.home;
+        setTimeout(() => {
+          celebrations.push({
+            match: eng,
+            team,
+            count: 1,
+            owner: store.employees.find((e) => e.teams.some((t) => t.fifaCode === team)) ?? null,
           });
         }, 800);
       }

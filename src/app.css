@@ -185,3 +185,10 @@ body {
   scrollbar-width: thin;
   scrollbar-color: var(--color-ink-4) transparent;
 }
+
+/* ── ?era=1966 easter egg ─────────────────────────────────────────────────────
+   England matches in black-and-white, as originally broadcast the last time
+   they won anything. Applied per-match by src/lib/state/era.js. */
+.era-1966 {
+  filter: grayscale(1) contrast(1.06) brightness(0.95);
+}

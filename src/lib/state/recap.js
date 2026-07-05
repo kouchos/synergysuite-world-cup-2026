@@ -7,7 +7,7 @@
  * Saturday morning onwards, not the whole tournament.
  */
 import { overallLeaderboard, teamOwner } from './prizes.js';
-import { englandLines } from './banter.js';
+import { englandLines, englandLostMatch, englandExitRoast } from './banter.js';
 
 export const RECAP_WINDOW_MS = 48 * 60 * 60 * 1000;
 // Auto-recap only after a proper absence — nipping out for lunch doesn't count.
@@ -98,7 +98,12 @@ export function recapSince(state, sinceMs, employees, prevRanks = null) {
   const engResults = results.filter((m) => m.home === 'ENG' || m.away === 'ENG');
   const england = engResults.length ? englandLines({ fixtures: engResults }, employees)[0] : null;
 
-  return { since, games, ownerDeltas, movements, england };
+  // The big one: England knocked out in this window → the recap goes full
+  // send-off. `round` marks knockout matches; group losses don't eliminate.
+  const exitMatch = engResults.find((m) => m.round && englandLostMatch(m));
+  const englandOut = exitMatch ? englandExitRoast(exitMatch, employees) : null;
+
+  return { since, games, ownerDeltas, movements, england, englandOut };
 }
 
 export function recapHasContent(recap) {

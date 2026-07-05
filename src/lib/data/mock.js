@@ -289,7 +289,22 @@ export const MOCK_STATE = {
 
     // ── Round of 16 — 4 played, 1 live (the big one), 3 to come ────────────────
     { id: 'r16-1', round: 'R16', slot: 1, utc: '2026-07-05T18:00:00Z', home: 'NED', away: 'MEX', homeGoals: 2, awayGoals: 0, status: 'final' },
-    { id: 'r16-2', round: 'R16', slot: 2, utc: '2026-07-05T22:00:00Z', home: 'JPN', away: 'ENG', homeGoals: 1, awayGoals: 2, status: 'final' },
+    {
+      id: 'r16-2',
+      round: 'R16',
+      slot: 2,
+      utc: '2026-07-05T22:00:00Z',
+      home: 'JPN',
+      away: 'ENG',
+      homeGoals: 1,
+      awayGoals: 2,
+      status: 'final',
+      events: [
+        { type: 'goal', team: 'JPN', player: 'Takefusa Kubo', minute: 31 },
+        { type: 'goal', team: 'ENG', player: 'Harry Kane', minute: 55 },
+        { type: 'goal', team: 'ENG', player: 'Jude Bellingham', minute: 78 },
+      ],
+    },
     {
       id: 'r16-3',
       round: 'R16',

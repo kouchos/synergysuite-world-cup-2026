@@ -5,8 +5,10 @@
   import LiveDot from './LiveDot.svelte';
   import { modal } from '../lib/state/modal.svelte.js';
   import { store } from '../lib/state/store.svelte.js';
+  import { inMonochrome } from '../lib/state/era.js';
 
   let { match, employees, stage = null } = $props();
+  const monochrome = $derived(inMonochrome(match));
 
   const home = $derived(teamFor(match.home));
   const away = $derived(teamFor(match.away));
@@ -38,8 +40,12 @@
 </script>
 
 <div
-  class="card lift p-2.5 {match.status === 'live' ? 'border-live/40' : isDerby ? 'border-gold/30' : ''}"
-  title={isDerby ? `Sweepstake derby: ${homeOwner.name} vs ${homeOwner.name} — wins either way` : undefined}
+  class="card lift p-2.5 {match.status === 'live' ? 'border-live/40' : isDerby ? 'border-gold/30' : ''} {monochrome ? 'era-1966' : ''}"
+  title={isDerby
+    ? `Sweepstake derby: ${homeOwner.name} vs ${homeOwner.name} — wins either way`
+    : monochrome
+      ? 'Broadcast in glorious 1966 monochrome'
+      : undefined}
 >
   {#if stage}
     <div class="type-kicker text-[9px] text-fg-faint text-center mb-1.5">{stage}</div>
